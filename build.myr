@@ -72,12 +72,13 @@ const testrun = {t, r
 
 
 const updates = {t
-	var old, new, err
+	var old, new, err, ret
 	var changed = false
 
 	err = ""
 	old = [][:]
 	new = [][:]
+	ret = [][:]
 
 	match head(t)
 	| `std.Ok r:
@@ -101,15 +102,18 @@ const updates = {t
 	;;
 
 	match between(t, old, new)
-	| `std.Ok r:	-> r
-	| `std.Err e:	-> [][:]
+	| `std.Ok r:
+		ret = r
+		goto done
+	| `std.Err e:
 	;;
 :error
 	std.put("unable to get updates: {}\n", err)
+:done
 	std.slfree(err)
 	std.slfree(old)
 	std.slfree(new)
-	-> [][:]
+	-> ret
 }
 
 const report = {t, r
