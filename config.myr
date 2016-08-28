@@ -27,12 +27,12 @@ const load = {cfg
 	| `std.None:	default.build = std.sldup(["make"][:])
 	;;
 	match inifile.get(ini, "", "clean")
-	| `std.Some c:	default.build = std.strtok(c)
-	| `std.None:	default.build = std.sldup(["make", "clean"][:])
+	| `std.Some c:	default.clean = std.strtok(c)
+	| `std.None:	default.clean = std.sldup(["make", "clean"][:])
 	;;
 	match inifile.get(ini, "", "test")
 	| `std.Some t:	default.test = std.strtok(t)
-	| `std.None:	default.test = [][:]
+	| `std.None:	default.test = ["make", "check"][:]
 	;;
 	match inifile.get(ini, "", "fix")
 	| `std.Some t:	default.fix = std.strtok(t)
@@ -54,8 +54,10 @@ const loadtarg = {ini, s, default
 	var repo, tip, build, clean, test, fix
 
 	std.put("{}\n", s)
+
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	tip = inifile.getv(ini, s, "tip", default.tip)
+
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
 	| `std.None:	build = default.build
@@ -68,11 +70,11 @@ const loadtarg = {ini, s, default
 	| `std.Some c:	clean = std.strtok(c)
 	| `std.None:	clean = default.clean
 	;;
-
 	match inifile.get(ini, s, "fix")
 	| `std.Some f:	fix = std.strtok(f)
 	| `std.None:	fix = default.fix
 	;;
+
 	-> std.mk([
 		.targ=std.sldup(s),
 		.repo=repo,

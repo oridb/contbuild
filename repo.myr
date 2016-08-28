@@ -29,6 +29,9 @@ const head = {t
 const between = {t, from, to
 	var range, ret
 
+	if std.sleq(from, to)
+		-> `std.Ok [][:]
+	;;
 	range = std.fmt("{}..{}", from, to)
 	ret = [][:]
 	match readcmd(["git", "rev-list", range][:])

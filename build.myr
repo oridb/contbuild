@@ -4,6 +4,21 @@ use sys
 use "types"
 use "repo"
 
+type report = struct
+	setup	: cmdreport
+	build	: cmdreport
+	test	: cmdreport
+	fix	: cmdreport
+	clean	: cmdreport
+;;
+
+type cmdreport = struct
+	cmd	: byte[:]
+	out	: byte[:]
+	err	: byte[:]
+	ok	: bool
+;;
+
 pkg contbuild =
 	const run : (targs : target#[:] -> void)
 ;;
@@ -20,15 +35,41 @@ const run = {targs
 }
 
 const runonce = {t
+	var r : report
+	var ranfix
+
+	r = [
+		.build=[.cmd="", .out="", .err="", .ok=true],
+		.test=[.cmd="", .out="", .err="", .ok=true],
+		.fix=[.cmd="", .out="", .err="", .ok=true],
+		.clean=[.cmd="", .out="", .err="", .ok=true],
+	]
+
 	for u in updates(t)
-		setup(t)
-		build(t)
-		test(t)
-		clean(t)
-		fix(t)
-		report(t)
+		std.put("Current update: {}\n", u)
+		ranfix = false
+		reset(&r)
+		if !checkout(t, u)
+			continue
+		;;
+:retry
+		if !testrun(t, &r)
+			if !ranfix
+				ranfix = true
+				runcmd(t.fix, &r.fix)
+				goto retry
+			;;
+		;;
+		report(t, &r)
 	;;
 }
+
+const testrun = {t, r
+	-> runcmd(t.build, &r.build) && \
+		runcmd(t.test, &r.test) && \
+		runcmd(t.clean, &r.clean)
+}
+
 
 const updates = {t
 	var old, new, err
@@ -71,51 +112,76 @@ const updates = {t
 	-> [][:]
 }
 
-const setup = {t
+const report = {t, r
+	reportcmd(&r.setup, "setup")
+	reportcmd(&r.build, "build")
+	reportcmd(&r.test, "test")
+	reportcmd(&r.fix, "fix")
+	reportcmd(&r.clean, "clean")
 }
 
-const build = {t
-	-> runcmd(t.build)
+const reportcmd = {c, phase
+	var result
+
+	if c.ok
+		result = "OK"
+	else
+		result = "FAIL"
+	;;
+	std.put("phase: {}: {}\n", phase, result)
+	std.put("cmd: {}\n", c.cmd)
+	std.put("-------- STDOUT --------\n")
+	std.put("{}\n\n", c.out)
+	std.put("-------- STDERR --------\n")
+	std.put("{}\n\n", c.err)
+	std.put("------------------------\n")
 }
 
-const test = {t
-	-> runcmd(t.test)
+const reset = {r
+	resetcmd(&r.setup)
+	resetcmd(&r.build)
+	resetcmd(&r.test)
+	resetcmd(&r.fix)
+	resetcmd(&r.clean)
 }
 
-const clean = {t
-	-> runcmd(t.clean)
+const resetcmd = {c
+	set(&c.out, "")
+	set(&c.err, "")
+	c.ok = true
 }
 
-const fix = {t
-	-> runcmd(t.fix)
+const set = {s, v
+	std.slfree(s#)
+	s# = v
 }
 
-const report = {t
-}
-
-const runcmd = {cmd
-	var pid
-
+const runcmd = {cmd, r
 	std.put("{}\n", cmd)
+	r.ok = true
 	if cmd.len == 0
 		-> true
-	;;
-	pid = std.fork()
-	if pid == -1
-		std.fatal("could not fork command\n")
-		-> false
-	elif pid == 0
-		if std.execvp(cmd[0], cmd) < 0
-			std.fatal("failed to exec {}\n", cmd[0])
-		;;
-		-> false
 	else
-		match std.wait(pid)
-		| `std.Wsuccess:	-> true
-		| `std.Wfailure:	-> false
-		| `std.Wsignalled:	-> false
-		| `std.Waiterror:	-> false
+		set(&r.cmd, std.strjoin(cmd, " "))
+		match std.espork(cmd)
+		| `std.Ok (pid, stdin, stdout, stderr):
+			match std.fslurp(stdout)
+			| `std.Ok o:	set(&r.out, o)
+			| `std.Err e:	set(&r.out, std.fmt("could not read stdout: {}\n", e))
+			;;
+			match std.fslurp(stderr)
+			| `std.Ok o:	set(&r.err, o)
+			| `std.Err e:	set(&r.err, std.fmt("could not read stderr: {}\n", e))
+			;;
+			match std.wait(pid)
+			| `std.Wsuccess:
+			| _:	r.ok = false
+			;;
+		| `std.Err e:
+			r.ok = false
+			set(&r.err, std.fmt("could not run command {}\n", cmd))
 		;;
+		-> r.ok
 	;;
 }
 
