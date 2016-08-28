@@ -1,0 +1,121 @@
+use std
+use sys
+
+use "types"
+use "repo"
+
+pkg contbuild =
+	const run : (targs : target#[:] -> void)
+;;
+
+const run = {targs
+	while true
+		std.put("running\n")
+		for t in targs
+			std.put("building: {}\n", t.targ)
+			runonce(t)
+		;;
+		std.usleep(1*std.Sec)
+	;;
+}
+
+const runonce = {t
+	for u in updates(t)
+		setup(t)
+		build(t)
+		test(t)
+		clean(t)
+		fix(t)
+		report(t)
+	;;
+}
+
+const updates = {t
+	var old, new, err
+	var changed = false
+
+	err = ""
+	old = [][:]
+	new = [][:]
+
+	match head(t)
+	| `std.Ok r:
+		old = r
+	| `std.Err e:	
+		err = e
+		goto error
+	;;
+
+	if !pull(t)
+		goto error
+	;;
+
+
+	match head(t)
+	| `std.Ok r:
+		new = r
+	| `std.Err e:	
+		err = e
+		goto error
+	;;
+
+	match between(t, old, new)
+	| `std.Ok r:	-> r
+	| `std.Err e:	-> [][:]
+	;;
+:error
+	std.put("unable to get updates: {}\n", err)
+	std.slfree(err)
+	std.slfree(old)
+	std.slfree(new)
+	-> [][:]
+}
+
+const setup = {t
+}
+
+const build = {t
+	-> runcmd(t.build)
+}
+
+const test = {t
+	-> runcmd(t.test)
+}
+
+const clean = {t
+	-> runcmd(t.clean)
+}
+
+const fix = {t
+	-> runcmd(t.fix)
+}
+
+const report = {t
+}
+
+const runcmd = {cmd
+	var pid
+
+	std.put("{}\n", cmd)
+	if cmd.len == 0
+		-> true
+	;;
+	pid = std.fork()
+	if pid == -1
+		std.fatal("could not fork command\n")
+		-> false
+	elif pid == 0
+		if std.execvp(cmd[0], cmd) < 0
+			std.fatal("failed to exec {}\n", cmd[0])
+		;;
+		-> false
+	else
+		match std.wait(pid)
+		| `std.Wsuccess:	-> true
+		| `std.Wfailure:	-> false
+		| `std.Wsignalled:	-> false
+		| `std.Waiterror:	-> false
+		;;
+	;;
+}
+

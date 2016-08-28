@@ -1,0 +1,29 @@
+use std
+
+use "types"
+use "config"
+use "build"
+
+const main = {args
+	var cmd, cfg
+	var targs
+
+	cmd = std.optparse(args, &[
+		.opts=[
+			[.opt='c', .arg="config", 
+				.desc="configuration file to use (default: contbuild.ini)"]
+		][:]
+	])
+
+	cfg = "contbuild.ini"
+	for opt in cmd.opts
+		match opt
+		| ('c', c):	cfg = c
+		| _:	std.die("unreachable")
+		;;
+	;;
+
+	targs = contbuild.load(cfg)
+	contbuild.run(targs)
+}
+

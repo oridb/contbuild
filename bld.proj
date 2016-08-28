@@ -1,0 +1,7 @@
+bin contbuild =
+	main.myr
+	build.myr
+	config.myr
+	repo.myr
+	types.myr
+;;

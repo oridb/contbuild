@@ -1,0 +1,98 @@
+use std
+use sys
+
+use "types"
+
+pkg contbuild =
+	const head	: (t : target# -> std.result(byte[:], byte[:]))
+	const pull	: (t : target# -> bool)
+	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
+	const checkout	: (t : target#, ref : byte[:] -> bool)
+;;
+
+const head = {t
+	var s, tip
+
+	tip = std.fmt("refs/heads/{}", t.tip)
+	match readcmd(["git", "show-ref", "-s", tip][:])
+	| `std.Ok r:	
+		s = std.sldup(std.strstrip(r))
+		std.slfree(tip)
+		std.slfree(r)
+		-> `std.Ok s
+	| `std.Err e:
+		std.slfree(tip)
+		-> `std.Err e
+	;;
+}
+
+const between = {t, from, to
+	var range, ret
+
+	range = std.fmt("{}..{}", from, to)
+	ret = [][:]
+	match readcmd(["git", "rev-list", range][:])
+	| `std.Ok r:
+		std.slfree(range)
+		for ln in std.bysplit(r, "\n")
+			std.slpush(&ret, std.sldup(ln))
+		;;
+		-> `std.Ok ret
+	| `std.Err e:
+		-> `std.Err e
+	;;
+}
+
+const checkout = {t, rev
+	match readcmd(["git", "checkout", rev][:])
+	| `std.Ok r:
+		std.slfree(r)
+		-> true
+	| `std.Err e:
+		std.slfree(e)
+		-> false
+	;;
+}
+
+const pull = {t
+	match readcmd(["git", "pull"][:])
+	| `std.Ok r:
+		std.slfree(r)
+		-> true
+	| `std.Err r:
+		std.slfree(r)
+		-> false
+	;;
+}
+
+const readcmd = {cmd
+	var s, ok
+
+	std.put("{}\n", cmd)
+	match std.spork(cmd)
+	| `std.Ok (pid, stdin, stdout):
+		std.close(stdin)
+		match std.fslurp(stdout)
+		| `std.Ok r:
+			s = r
+			ok = true
+		| `std.Err r:
+			s = std.sldup("unable to read output")
+			ok = false
+		;;
+
+		match std.wait(pid)
+		| `std.Wsuccess:
+		| _:	ok = false
+		;;
+
+		if ok
+			std.put("output: {}\n", s)
+			-> `std.Ok s
+		else
+			-> `std.Err s
+		;;
+	| `std.Err e:
+		-> `std.Err std.sldup("unable to execute")
+	;;
+}

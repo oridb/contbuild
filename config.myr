@@ -1,0 +1,86 @@
+use std
+use inifile
+
+use "types"
+
+pkg contbuild =
+	const load	: (path : byte[:] -> target#[:])
+;;
+
+const load = {cfg
+	var default : target
+	var targs
+	var ini
+
+	match inifile.load(cfg)
+	| `std.Ok f:	ini = f
+	| `std.Err e:	std.fatal("couldn't load {}: {}\n", cfg, e)
+	;;
+
+
+	/* defaults */
+	default.targ = ""
+	default.tip = inifile.getv(ini, "", "tip", "master")
+	default.repo = inifile.getv(ini, "", "repo", "")
+	match inifile.get(ini, "", "build")
+	| `std.Some b:	default.build = std.strtok(b)
+	| `std.None:	default.build = std.sldup(["make"][:])
+	;;
+	match inifile.get(ini, "", "clean")
+	| `std.Some c:	default.build = std.strtok(c)
+	| `std.None:	default.build = std.sldup(["make", "clean"][:])
+	;;
+	match inifile.get(ini, "", "test")
+	| `std.Some t:	default.test = std.strtok(t)
+	| `std.None:	default.test = [][:]
+	;;
+	match inifile.get(ini, "", "fix")
+	| `std.Some t:	default.fix = std.strtok(t)
+	| `std.None:	default.fix = [][:]
+	;;
+
+	/* read the targets */
+	targs = [][:]
+	for s in inifile.bysection(ini)
+		if s.len != 0
+			std.slpush(&targs, loadtarg(ini, s, &default))
+		;;
+	;;
+
+	-> targs
+}
+
+const loadtarg = {ini, s, default
+	var repo, tip, build, clean, test, fix
+
+	std.put("{}\n", s)
+	repo = inifile.getv(ini, s, "repo", default.repo)
+	tip = inifile.getv(ini, s, "tip", default.tip)
+	match inifile.get(ini, s, "build")
+	| `std.Some b:	build = std.strtok(b)
+	| `std.None:	build = default.build
+	;;
+	match inifile.get(ini, s, "test")
+	| `std.Some t:	test = std.strtok(t)
+	| `std.None:	test = default.test
+	;;
+	match inifile.get(ini, s, "clean")
+	| `std.Some c:	clean = std.strtok(c)
+	| `std.None:	clean = default.clean
+	;;
+
+	match inifile.get(ini, s, "fix")
+	| `std.Some f:	fix = std.strtok(f)
+	| `std.None:	fix = default.fix
+	;;
+	-> std.mk([
+		.targ=std.sldup(s),
+		.repo=repo,
+		.tip=tip,
+		.build=build,
+		.test=test,
+		.clean=clean,
+		.fix=fix,
+	])
+}
+

@@ -1,0 +1,14 @@
+use std
+
+pkg contbuild =
+	type target = struct
+		tip	: byte[:]
+		targ	: byte[:]
+		repo	: byte[:]
+		build	: byte[:][:]
+		clean	: byte[:][:]
+		test	: byte[:][:]
+		fix	: byte[:][:]
+	;;
+
+;;
