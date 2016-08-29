@@ -3,21 +3,7 @@ use sys
 
 use "types"
 use "repo"
-
-type report = struct
-	setup	: cmdreport
-	build	: cmdreport
-	test	: cmdreport
-	fix	: cmdreport
-	clean	: cmdreport
-;;
-
-type cmdreport = struct
-	cmd	: byte[:]
-	out	: byte[:]
-	err	: byte[:]
-	ok	: bool
-;;
+use "report-html"
 
 pkg contbuild =
 	const run : (targs : target#[:] -> void)
@@ -43,7 +29,7 @@ const run = {targs
 
 const runonce = {t
 	var r : report
-	var ranfix
+	var ranfix, ok
 
 	r = [
 		.build=[.cmd="", .out="", .err="", .ok=true],
@@ -61,14 +47,19 @@ const runonce = {t
 		;;
 :retry
 		if !testrun(t, &r)
+			ok = false
 			if !ranfix
 				ranfix = true
 				runcmd(t.fix, &r.fix)
 				goto retry
 			;;
+		else
+			ok = true
 		;;
-		report(t, &r)
+		report(t, &r, ok, u)
+		purge(t)
 	;;
+	checkout(t, t.tip)
 }
 
 const testrun = {t, r
@@ -123,33 +114,11 @@ const updates = {t
 	-> ret
 }
 
-const report = {t, r
-	reportcmd(&r.setup, "setup")
-	reportcmd(&r.build, "build")
-	reportcmd(&r.test, "test")
-	reportcmd(&r.fix, "fix")
-	reportcmd(&r.clean, "clean")
-}
-
-const reportcmd = {c, phase
-	var result
-
-	if c.ok
-		result = "OK"
-	else
-		result = "FAIL"
-	;;
-	std.put("phase: {}: {}\n", phase, result)
-	std.put("cmd: {}\n", c.cmd)
-	std.put("-------- STDOUT --------\n")
-	std.put("{}\n\n", c.out)
-	std.put("-------- STDERR --------\n")
-	std.put("{}\n\n", c.err)
-	std.put("------------------------\n")
+const report = {t, r, status, hash
+	reporthtml(t, r, status, hash);
 }
 
 const reset = {r
-	resetcmd(&r.setup)
 	resetcmd(&r.build)
 	resetcmd(&r.test)
 	resetcmd(&r.fix)

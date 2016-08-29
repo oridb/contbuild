@@ -11,8 +11,26 @@ pkg contbuild =
 		test	: byte[:][:]
 		fix	: byte[:][:]
 
+		/* report options */
+		htmldir	: byte[:]
+		emails	: byte[:][:]
+		ircchan	: byte[:]
+
 		/* computed dirs */
 		_repo	: byte[:]
 	;;
 
+	type report = struct
+		build	: cmdreport
+		test	: cmdreport
+		fix	: cmdreport
+		clean	: cmdreport
+	;;
+
+	type cmdreport = struct
+		cmd	: byte[:]
+		out	: byte[:]
+		err	: byte[:]
+		ok	: bool
+	;;
 ;;

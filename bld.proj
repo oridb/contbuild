@@ -3,5 +3,6 @@ bin contbuild =
 	build.myr
 	config.myr
 	repo.myr
+	report-html.myr
 	types.myr
 ;;

@@ -24,6 +24,7 @@ const load = {cfg
 	default.tip = inifile.getv(ini, "", "tip", "master")
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.scratch = inifile.getv(ini, "", "scratch", tmpdir)
+	default.htmldir = inifile.getv(ini, "", "htmldir", "")
 	match inifile.get(ini, "", "build")
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
@@ -54,12 +55,14 @@ const load = {cfg
 
 const loadtarg = {ini, s, default
 	var repo, tip, build, scratch, clean, test, fix
+	var htmldir
 
 	std.put("{}\n", s)
 
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	tip = inifile.getv(ini, s, "tip", default.tip)
 	scratch = inifile.getv(ini, s, "scratch", default.scratch)
+	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
@@ -83,6 +86,7 @@ const loadtarg = {ini, s, default
 		.repo=repo,
 		.tip=tip,
 		.scratch=scratch,
+		.htmldir=htmldir,
 		.build=build,
 		.test=test,
 		.clean=clean,

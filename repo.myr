@@ -9,6 +9,7 @@ pkg contbuild =
 	const pull	: (t : target# -> bool)
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
 	const checkout	: (t : target#, ref : byte[:] -> bool)
+	const purge	: (t : target# -> bool)
 ;;
 
 const clone = {t
@@ -23,9 +24,23 @@ const clone = {t
 	;;
 }
 
+const purge = {t
+	std.chdir(t._repo)
+	match readcmd(["git", "clean", "-xfd"][:])
+	| `std.Ok r:
+		std.slfree(r)
+		-> true
+	| `std.Err e:
+		std.put("could not purge: {}\n", e)
+		std.slfree(e)
+		-> false
+	;;
+}
+
 const head = {t
 	var s, tip
 
+	std.chdir(t._repo)
 	tip = std.fmt("refs/heads/{}", t.tip)
 	match readcmd(["git", "show-ref", "-s", tip][:])
 	| `std.Ok r:	
@@ -45,6 +60,7 @@ const between = {t, from, to
 	if std.sleq(from, to)
 		-> `std.Ok [][:]
 	;;
+	std.chdir(t._repo)
 	range = std.fmt("{}..{}", from, to)
 	ret = [][:]
 	match readcmd(["git", "rev-list", range][:])
@@ -60,6 +76,7 @@ const between = {t, from, to
 }
 
 const checkout = {t, rev
+	std.chdir(t._repo)
 	match readcmd(["git", "checkout", rev][:])
 	| `std.Ok r:
 		std.slfree(r)
@@ -71,6 +88,7 @@ const checkout = {t, rev
 }
 
 const pull = {t
+	std.chdir(t._repo)
 	match readcmd(["git", "pull"][:])
 	| `std.Ok r:
 		std.slfree(r)
