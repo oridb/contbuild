@@ -4,11 +4,24 @@ use sys
 use "types"
 
 pkg contbuild =
+	const clone	: (t : target# -> bool)
 	const head	: (t : target# -> std.result(byte[:], byte[:]))
 	const pull	: (t : target# -> bool)
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
 	const checkout	: (t : target#, ref : byte[:] -> bool)
 ;;
+
+const clone = {t
+	match readcmd(["git", "clone", t.repo, t._repo][:])
+	| `std.Ok r:
+		std.slfree(r)
+		-> true
+	| `std.Err e:	
+		std.put("could not clone: {}\n", e)
+		std.slfree(e)
+		-> false
+	;;
+}
 
 const head = {t
 	var s, tip

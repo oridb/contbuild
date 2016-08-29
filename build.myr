@@ -24,13 +24,22 @@ pkg contbuild =
 ;;
 
 const run = {targs
+	for t in targs
+		if !std.fexists(t._repo)
+			std.chdir(t.scratch)
+			clone(t)
+		;;
+	;;
+
 	while true
 		std.put("running\n")
 		for t in targs
 			std.put("building: {}\n", t.targ)
+			std.chdir(t._repo)
 			runonce(t)
+
 		;;
-		std.usleep(1*std.Sec)
+		std.usleep(120*std.Sec)
 	;;
 }
 

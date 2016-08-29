@@ -9,8 +9,8 @@ pkg contbuild =
 
 const load = {cfg
 	var default : target
-	var targs
-	var ini
+	var targs, ini
+	var tmpdir
 
 	match inifile.load(cfg)
 	| `std.Ok f:	ini = f
@@ -19,9 +19,11 @@ const load = {cfg
 
 
 	/* defaults */
+	tmpdir = std.getenvv("TMP", "/tmp")
 	default.targ = ""
 	default.tip = inifile.getv(ini, "", "tip", "master")
 	default.repo = inifile.getv(ini, "", "repo", "")
+	default.scratch = inifile.getv(ini, "", "scratch", tmpdir)
 	match inifile.get(ini, "", "build")
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
@@ -51,12 +53,13 @@ const load = {cfg
 }
 
 const loadtarg = {ini, s, default
-	var repo, tip, build, clean, test, fix
+	var repo, tip, build, scratch, clean, test, fix
 
 	std.put("{}\n", s)
 
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	tip = inifile.getv(ini, s, "tip", default.tip)
+	scratch = inifile.getv(ini, s, "scratch", default.scratch)
 
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
@@ -79,10 +82,12 @@ const loadtarg = {ini, s, default
 		.targ=std.sldup(s),
 		.repo=repo,
 		.tip=tip,
+		.scratch=scratch,
 		.build=build,
 		.test=test,
 		.clean=clean,
 		.fix=fix,
+		._repo=std.pathcat(scratch, s)
 	])
 }
 

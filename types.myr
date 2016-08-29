@@ -5,10 +5,14 @@ pkg contbuild =
 		tip	: byte[:]
 		targ	: byte[:]
 		repo	: byte[:]
+		scratch	: byte[:]
 		build	: byte[:][:]
 		clean	: byte[:][:]
 		test	: byte[:][:]
 		fix	: byte[:][:]
+
+		/* computed dirs */
+		_repo	: byte[:]
 	;;
 
 ;;
