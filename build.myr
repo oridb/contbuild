@@ -32,9 +32,7 @@ const run = {targs
 	;;
 
 	while true
-		std.put("running\n")
 		for t in targs
-			std.put("building: {}\n", t.targ)
 			std.chdir(t._repo)
 			runonce(t)
 
