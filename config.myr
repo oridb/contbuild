@@ -39,7 +39,7 @@ const load = {cfg
 	;;
 	match inifile.get(ini, "", "test")
 	| `std.Some t:	default.test = std.strtok(t)
-	| `std.None:	default.test = ["make", "check"][:]
+	| `std.None:	default.test = std.sldup(["make", "check"][:])
 	;;
 	match inifile.get(ini, "", "fix")
 	| `std.Some t:	default.fix = std.strtok(t)

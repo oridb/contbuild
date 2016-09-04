@@ -15,7 +15,7 @@ const reporthtml = {build, targ, report, hash
 	;;
 
 	std.put("generating into {}/reports/{}/{}.html\n", targ.htmldir, targ.targ, hash)
-	match openreport(targ.htmldir, targ.targ, "reports", hash)
+	match openreport(targ.htmldir, targ.targ, "reports", targ.targ, hash)
 	| `std.Ok f:
 		puthdr(f, targ.targ)
 		putsidebar(f, build)
@@ -58,7 +58,7 @@ const reportcmd = {f, c, phase
 }
 
 const updateindex = {b, targ
-	match openreport(targ.htmldir, "", "", "index")
+	match openreport(targ.htmldir, "", "", "", "index")
 	| `std.Ok f:
 		puthdr(f, "All Builds")
 		putsidebar(f, b)
@@ -134,12 +134,12 @@ const putfooter = {f
 }
 
 
-const openreport = {htmldir, build, base, name
+const openreport = {htmldir, build, base, rdir, name
 	var reportdir, reportpath, reportname
 	var r
 
 	reportname = std.strcat(name, ".html")
-	reportdir = std.pathcat(htmldir, base)
+	reportdir = std.pathjoin([htmldir, base, rdir][:])
 	reportpath = std.pathcat(reportdir, reportname)
 
 	std.mkpath(htmldir)
