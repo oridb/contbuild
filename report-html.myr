@@ -18,7 +18,7 @@ const reporthtml = {build, targ, report, hash
 	match openreport(targ.htmldir, targ.targ, "reports", targ.targ, hash)
 	| `std.Ok f:
 		puthdr(f, targ.targ, targ.htmlstyle)
-		putsidebar(f, build)
+		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
 		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.targ)
 		puthistory(f, targ)
@@ -61,7 +61,7 @@ const updateindex = {b, targ
 	match openreport(targ.htmldir, "", "", "", "index")
 	| `std.Ok f:
 		puthdr(f, "All Builds", b.htmlstyle)
-		putsidebar(f, b)
+		putsidebar(f, b, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
 		for t in b.targs
 			if !std.sleq(targ.htmldir, t.htmldir)
@@ -117,11 +117,14 @@ const puthistory = {f, t
 	bio.put(f, "</tr></table>\n")
 }
 
-const putsidebar = {f, b
+const putsidebar = {f, b, htmlbase
 	bio.put(f, "<nav><ul>")
+	bio.put(f, "\t<li>\n")
+	bio.put(f, "\t\t<a href={}/index.html>All Builds</a>\n", htmlbase)
+	bio.put(f, "\t</li>\n")
 	for t in b.targs
 		bio.put(f, "\t<li>\n")
-		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", t._htmlbase, t.targ, lasthash(t), t.targ)
+		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", htmlbase, t.targ, lasthash(t), t.targ)
 		bio.put(f, "\t</li>\n")
 	;;
 	bio.put(f, "</ul></nav>")
