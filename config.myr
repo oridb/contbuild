@@ -1,30 +1,34 @@
 use std
+use bio
 use inifile
 
 use "types"
 
 pkg contbuild =
-	const load	: (path : byte[:] -> target#[:])
+	const load	: (path : byte[:] -> build#)
 ;;
 
 const load = {cfg
 	var default : target
 	var targs, ini
-	var tmpdir
+	var tmpdir, scratch
+	var logfile, logfd
 
 	match inifile.load(cfg)
 	| `std.Ok f:	ini = f
 	| `std.Err e:	std.fatal("couldn't load {}: {}\n", cfg, e)
 	;;
 
+	/* global opts */
+	tmpdir = std.pathcat(std.getenvv("TMP", "/tmp"), "contbuild-work")
+	scratch = inifile.getv(ini, "", "scratch", tmpdir)
+	std.mkpath(scratch)
 
-	/* defaults */
-	tmpdir = std.getenvv("TMP", "/tmp")
 	default.targ = ""
-	default.tip = inifile.getv(ini, "", "tip", "master")
 	default.repo = inifile.getv(ini, "", "repo", "")
-	default.scratch = inifile.getv(ini, "", "scratch", tmpdir)
+	default.tip = inifile.getv(ini, "", "tip", "master")
 	default.htmldir = inifile.getv(ini, "", "htmldir", "")
+	default.htmlroot = inifile.getv(ini, "", "htmlroot", default.htmlroot)
 	match inifile.get(ini, "", "build")
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
@@ -46,23 +50,39 @@ const load = {cfg
 	targs = [][:]
 	for s in inifile.bysection(ini)
 		if s.len != 0
-			std.slpush(&targs, loadtarg(ini, s, &default))
+			std.slpush(&targs, loadtarg(ini, s, scratch, &default))
 		;;
 	;;
 
-	-> targs
+	/* read the build log */
+	logfile = std.pathcat(scratch, "contbuild.log")
+	match std.openmode(logfile, std.Ordwr | std.Ocreat, 0o644)
+	| `std.Ok fd:	logfd = fd
+	| `std.Err e:	std.fatal("could not open build log {}: {}\n", logfile, e)
+	;;
+	std.slfree(logfile)
+
+	readlog(targs, logfd)
+
+
+	-> std.mk([.logfd=logfd, .targs=targs, .scratch=scratch])
 }
 
-const loadtarg = {ini, s, default
-	var repo, tip, build, scratch, clean, test, fix
-	var htmldir
-
-	std.put("{}\n", s)
+const loadtarg = {ini, s, scratch, default
+	var repo, tip, build, clean, test, fix
+	var htmldir, htmlroot, htmlbase
 
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	tip = inifile.getv(ini, s, "tip", default.tip)
-	scratch = inifile.getv(ini, s, "scratch", default.scratch)
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
+	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
+	if htmlroot.len == 0
+		htmlroot = std.sldup(htmlbase)
+	;;
+	if std.hasprefix(htmldir, htmlroot)
+		htmlbase = std.fmt("/{}", htmldir[htmlroot.len:])
+	;;
+
 
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
@@ -81,17 +101,55 @@ const loadtarg = {ini, s, default
 	| `std.None:	fix = default.fix
 	;;
 
+
 	-> std.mk([
 		.targ=std.sldup(s),
 		.repo=repo,
 		.tip=tip,
-		.scratch=scratch,
-		.htmldir=htmldir,
 		.build=build,
 		.test=test,
 		.clean=clean,
 		.fix=fix,
-		._repo=std.pathcat(scratch, s)
+		.htmldir=htmldir,
+		.htmlroot=htmlroot,
+		._repo=std.pathcat(scratch, s),
+		._htmlbase=htmlbase,
+		._status=true
 	])
 }
 
+
+const readlog = {targs, fd
+	var recbuf : byte[:][3]
+	var ht, f, rec : byte[:][:]
+
+	ht = std.mkht(std.strhash, std.streq)
+	for t in targs
+		std.htput(ht, t.targ, t)
+	;;
+	f = bio.mkfile(fd, bio.Rd)
+	for ln in bio.byline(f)
+		rec = std.bstrtok(recbuf[:], ln)
+		if rec.len == 3
+			addresult(ht, rec[0], rec[1], rec[2])
+		;;
+	;;
+	bio.free(f)
+	std.htfree(ht)
+}
+
+const addresult = {ht, hash, status, targ
+	var tt
+
+	tt = std.htget(ht, std.strstrip(targ))
+	match (tt, status)
+	| (`std.Some t, "true"):
+		std.slpush(&t._hist, (std.sldup(hash), true))
+		t._status = true
+	| (`std.Some t, "false"):
+		std.slpush(&t._hist, (std.sldup(hash), false))
+		t._status = false
+	| _:
+		std.put("skip:\t{}: {}: {}\n", hash, status, targ)
+	;;
+}

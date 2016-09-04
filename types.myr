@@ -1,11 +1,16 @@
 use std
 
 pkg contbuild =
-	type target = struct
-		tip	: byte[:]
-		targ	: byte[:]
-		repo	: byte[:]
+	type build = struct
+		targs	: target#[:]
 		scratch	: byte[:]
+		logfd	: std.fd
+	;;
+
+	type target = struct
+		targ	: byte[:]
+		tip	: byte[:]
+		repo	: byte[:]
 		build	: byte[:][:]
 		clean	: byte[:][:]
 		test	: byte[:][:]
@@ -13,11 +18,14 @@ pkg contbuild =
 
 		/* report options */
 		htmldir	: byte[:]
-		emails	: byte[:][:]
-		ircchan	: byte[:]
+		htmlroot: byte[:]
+		htmlstyle	: byte[:]
 
-		/* computed dirs */
+		/* computed */
 		_repo	: byte[:]
+		_hist	: (byte[:], bool)[:]
+		_status	: bool
+		_htmlbase	: byte[:]
 	;;
 
 	type report = struct

@@ -5,8 +5,7 @@ use "config"
 use "build"
 
 const main = {args
-	var cmd, cfg
-	var targs
+	var cmd, cfg, b
 
 	cmd = std.optparse(args, &[
 		.opts=[
@@ -23,7 +22,7 @@ const main = {args
 		;;
 	;;
 
-	targs = contbuild.load(cfg)
-	contbuild.run(targs)
+	b = contbuild.load(cfg)
+	contbuild.run(b)
 }
 

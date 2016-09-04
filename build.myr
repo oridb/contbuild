@@ -6,28 +6,28 @@ use "repo"
 use "report-html"
 
 pkg contbuild =
-	const run : (targs : target#[:] -> void)
+	const run : (build : build# -> void)
 ;;
 
-const run = {targs
-	for t in targs
+const run = {build
+	for t in build.targs
 		if !std.fexists(t._repo)
-			std.chdir(t.scratch)
+			std.chdir(build.scratch)
 			clone(t)
 		;;
 	;;
 
 	while true
-		for t in targs
+		for t in build.targs
 			std.chdir(t._repo)
-			runonce(t)
+			runonce(build, t)
 
 		;;
-		std.usleep(120*std.Sec)
+		std.usleep(5*std.Sec)
 	;;
 }
 
-const runonce = {t
+const runonce = {build, targ
 	var r : report
 	var ranfix, ok
 
@@ -38,28 +38,28 @@ const runonce = {t
 		.clean=[.cmd="", .out="", .err="", .ok=true],
 	]
 
-	for u in updates(t)
+	for u in updates(targ)
 		std.put("Current update: {}\n", u)
 		ranfix = false
 		reset(&r)
-		if !checkout(t, u)
+		if !checkout(targ, u)
 			continue
 		;;
 :retry
-		if !testrun(t, &r)
+		if !testrun(targ, &r)
 			ok = false
 			if !ranfix
 				ranfix = true
-				runcmd(t.fix, &r.fix)
+				runcmd(targ.fix, &r.fix)
 				goto retry
 			;;
 		else
 			ok = true
 		;;
-		report(t, &r, ok, u)
-		purge(t)
+		report(build, targ, &r, ok, u)
+		purge(targ)
 	;;
-	checkout(t, t.tip)
+	checkout(targ, targ.tip)
 }
 
 const testrun = {t, r
@@ -114,8 +114,18 @@ const updates = {t
 	-> ret
 }
 
-const report = {t, r, status, hash
-	reporthtml(t, r, status, hash);
+const report = {build, targ, report, status, hash
+	var changed
+
+	changed = targ._status != status
+
+	/* update the book keeping */
+	targ._status = status
+	std.fput(build.logfd, "{} {} {}\n", hash, status, targ.targ)
+	std.slpush(&targ._hist, (std.sldup(hash), status))
+
+	reporthtml(build, targ, report, hash);
+	/* annoying reports should only get fired if we change */
 }
 
 const reset = {r
