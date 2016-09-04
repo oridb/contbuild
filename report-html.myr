@@ -1,0 +1,181 @@
+use std
+use bio
+use date
+
+use "types"
+
+pkg contbuild =
+	const reporthtml	: (b : build#, targ : target#, report : report#, hash : byte[:] -> void)
+;;
+
+const reporthtml = {build, targ, report, hash
+	/* only write this if we've configured html */
+	if targ.htmldir.len == 0
+		-> void
+	;;
+
+	std.put("generating into {}/reports/{}/{}.html\n", targ.htmldir, targ.targ, hash)
+	match openreport(targ.htmldir, targ.targ, "reports", hash)
+	| `std.Ok f:
+		puthdr(f, targ.targ)
+		putsidebar(f, build)
+		bio.put(f, "\t<article>\n")
+		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.targ)
+		puthistory(f, targ)
+		putstatus(f, targ._status)
+		reportcmd(f, &report.build, "build")
+		reportcmd(f, &report.test, "test")
+		/* we usually don't have a fix command */
+		if targ.fix.len > 0
+			reportcmd(f, &report.fix, "fix")
+		;;
+		reportcmd(f, &report.clean, "clean")
+		bio.put(f, "\t</article>\n")
+		putfooter(f)
+		bio.close(f)
+	| `std.Err e:
+		std.put("unable to open directory: {}\n", e)
+	;;
+	updateindex(build, targ)
+}
+
+const reportcmd = {f, c, phase
+	bio.put(f, "<h3>{}: {}: {}</h3>\n", status(c.ok), phase, c.cmd)
+
+	bio.put(f, "<summary>STDOUT</summary>\n")
+	bio.put(f, "<details>\n")
+	bio.put(f, "<p><code><pre>\n")
+	bio.put(f, "{}\n\n", c.out)
+	bio.put(f, "</code></p>\n")
+	bio.put(f, "</details>\n")
+
+	bio.put(f, "<summary>STDERR</summary>\n")
+	bio.put(f, "<details>\n")
+	bio.put(f, "<p><code><pre>\n")
+	bio.put(f, "{}\n\n", c.err)
+	bio.put(f, "</code></p>\n")
+	bio.put(f, "</details>\n")
+}
+
+const updateindex = {b, targ
+	match openreport(targ.htmldir, "", "", "index")
+	| `std.Ok f:
+		puthdr(f, "All Builds")
+		putsidebar(f, b)
+		bio.put(f, "\t<article>\n")
+		for t in b.targs
+			if !std.sleq(targ.htmldir, t.htmldir)
+				continue
+			;;
+			bio.put(f, "\t\t<h2>{}: {}</h2>\n", t.targ, status(t._status))
+			bio.put(f, "\t\t<p><a href={}/reports/{}/{}.html>[{}] latest build</a></p>\n", \
+				t._htmlbase, t.targ, lasthash(t), status(t._status))
+			puthistory(f, t)
+		;;
+		bio.put(f, "\t</article>\n")
+		putfooter(f)
+		bio.close(f)
+	| `std.Err e:
+	;;
+}
+
+const puthdr = {f, targname
+	bio.put(f, "<html>\n")
+	bio.put(f, "\t<head>\n")
+	bio.put(f, "\t\t<meta http-eqiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n")
+	bio.put(f, "\t\t<link rel=\"stylesheet\" href=\"/style.css\" />\n")
+	bio.put(f, "\t\t<title>Build Results: {}</title>\n", targname)
+	bio.put(f, "\t\t<meta name=viewport content=\"width=device-width, initial-scale=1\" />\n")
+	bio.put(f, "\t</head>\n")
+	bio.put(f, "\t<body>\n")
+	bio.put(f, "\t\t<header>\n")
+	bio.put(f, "\t\t\t<h1>Build results: {}</h1>\n", targname)
+	bio.put(f, "\t\t</header>\n")
+}
+
+const putstatus = {f, st
+	bio.put(f, "\t\t<div id=\"status\">\n")
+	bio.put(f, "\t\t{}\n", status(st))
+	bio.put(f, "\t\t</div>\n")
+}
+
+const puthistory = {f, t
+	const lnkstyle="\"display:block;width:100%;height:100%;\""
+	bio.put(f, "<table style=\"border:1px solid black;\"><tr>\n")
+	for (hash, st) in tailents(t._hist, 20)
+		if st
+			bio.put(f, "<td style=\"width:1em;height:1em;\" bgcolor=green>")
+			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
+				lnkstyle, t._htmlbase, t.targ, hash)
+		else
+			bio.put(f, "<td style=\"width:1em;height:1em\" bgcolor=red>")
+			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
+				lnkstyle, t._htmlbase, t.targ, hash)
+		;;
+		bio.put(f, "</td>\n")
+	;;
+	bio.put(f, "</tr></table>\n")
+}
+
+const putsidebar = {f, b
+	bio.put(f, "<nav><ul>")
+	for t in b.targs
+		bio.put(f, "\t<li>\n")
+		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", t._htmlbase, t.targ, lasthash(t), t.targ)
+		bio.put(f, "\t</li>\n")
+	;;
+	bio.put(f, "</ul></nav>")
+}
+
+const putfooter = {f
+	bio.put(f, "\t<footer><p>contbuild</p></footer>\n")
+	bio.put(f, "\t</body>\n")
+	bio.put(f, "</html>\n")
+}
+
+
+const openreport = {htmldir, build, base, name
+	var reportdir, reportpath, reportname
+	var r
+
+	reportname = std.strcat(name, ".html")
+	reportdir = std.pathcat(htmldir, base)
+	reportpath = std.pathcat(reportdir, reportname)
+
+	std.mkpath(htmldir)
+	std.mkpath(reportdir)
+	std.put("Writing {}\n", reportpath)
+	r = bio.create(reportpath, bio.Wr, 0o644)
+
+	std.slfree(reportname)
+	std.slfree(reportpath)
+	std.slfree(reportdir)
+
+	-> r
+}
+
+const status = {ok
+	if ok
+		-> "OK"
+	else
+		-> "FAIL"
+	;;
+}
+
+generic tailents = {a : @a[:], n
+	if a.len < n
+		-> a
+	else
+		-> a[a.len - n : ]
+	;;
+}
+
+const lasthash = {t
+	if t._hist.len == 0
+		-> "NONE"
+	else
+		match t._hist[t._hist.len - 1]
+		| (h, _):	-> h
+		;;
+	;;
+}
