@@ -104,11 +104,11 @@ const puthistory = {f, t
 	bio.put(f, "<table style=\"border:1px solid black;\"><tr>\n")
 	for (hash, st) in tailents(t._hist, 20)
 		if st
-			bio.put(f, "<td style=\"width:1em;height:1em;\" bgcolor=green>")
+			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
 				lnkstyle, t._htmlbase, t.targ, hash)
 		else
-			bio.put(f, "<td style=\"width:1em;height:1em\" bgcolor=red>")
+			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=red>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
 				lnkstyle, t._htmlbase, t.targ, hash)
 		;;
