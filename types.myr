@@ -5,6 +5,7 @@ pkg contbuild =
 		targs	: target#[:]
 		scratch	: byte[:]
 		logfd	: std.fd
+		period	: std.time
 	;;
 
 	type target = struct

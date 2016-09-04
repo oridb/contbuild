@@ -11,7 +11,7 @@ pkg contbuild =
 const load = {cfg
 	var default : target
 	var targs, ini
-	var tmpdir, scratch
+	var tmpdir, scratch, period
 	var logfile, logfd
 
 	match inifile.load(cfg)
@@ -23,6 +23,12 @@ const load = {cfg
 	tmpdir = std.pathcat(std.getenvv("TMP", "/tmp"), "contbuild-work")
 	scratch = inifile.getv(ini, "", "scratch", tmpdir)
 	std.mkpath(scratch)
+
+	/* default 5 minute poll */
+	match std.intparse(inifile.getv(ini, "", "period", "300"))
+	| `std.Some v:	period = v * std.Sec
+	| `std.None:	std.fatal("unable to parse 'period'\n")
+	;;
 
 	default.targ = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
@@ -65,7 +71,12 @@ const load = {cfg
 	readlog(targs, logfd)
 
 
-	-> std.mk([.logfd=logfd, .targs=targs, .scratch=scratch])
+	-> std.mk([
+		.logfd=logfd,
+		.targs=targs,
+		.scratch=scratch,
+		.period=period
+	])
 }
 
 const loadtarg = {ini, s, scratch, default

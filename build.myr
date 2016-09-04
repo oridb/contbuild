@@ -23,7 +23,7 @@ const run = {build
 			runonce(build, t)
 
 		;;
-		std.usleep(5*std.Sec)
+		std.usleep(build.period)
 	;;
 }
 
@@ -39,7 +39,6 @@ const runonce = {build, targ
 	]
 
 	for u in updates(targ)
-		std.put("Current update: {}\n", u)
 		ranfix = false
 		reset(&r)
 		if !checkout(targ, u)
