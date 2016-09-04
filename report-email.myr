@@ -1,0 +1,10 @@
+use std
+
+use "types"
+
+pkg contbuild =
+	const reportemail	: (b : build#, targ : target#, report : report#, hash : byte[:] -> void)
+;;
+
+const reportemail = {b, t, r, h
+}

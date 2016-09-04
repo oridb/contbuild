@@ -17,7 +17,7 @@ const reporthtml = {build, targ, report, hash
 	std.put("generating into {}/reports/{}/{}.html\n", targ.htmldir, targ.targ, hash)
 	match openreport(targ.htmldir, targ.targ, "reports", targ.targ, hash)
 	| `std.Ok f:
-		puthdr(f, targ.targ)
+		puthdr(f, targ.targ, targ.htmlstyle)
 		putsidebar(f, build)
 		bio.put(f, "\t<article>\n")
 		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.targ)
@@ -60,7 +60,7 @@ const reportcmd = {f, c, phase
 const updateindex = {b, targ
 	match openreport(targ.htmldir, "", "", "", "index")
 	| `std.Ok f:
-		puthdr(f, "All Builds")
+		puthdr(f, "All Builds", b.htmlstyle)
 		putsidebar(f, b)
 		bio.put(f, "\t<article>\n")
 		for t in b.targs
@@ -79,11 +79,11 @@ const updateindex = {b, targ
 	;;
 }
 
-const puthdr = {f, targname
+const puthdr = {f, targname, style
 	bio.put(f, "<html>\n")
 	bio.put(f, "\t<head>\n")
 	bio.put(f, "\t\t<meta http-eqiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n")
-	bio.put(f, "\t\t<link rel=\"stylesheet\" href=\"/style.css\" />\n")
+	bio.put(f, "\t\t<link rel=\"stylesheet\" href=\"{}\" />\n", style)
 	bio.put(f, "\t\t<title>Build Results: {}</title>\n", targname)
 	bio.put(f, "\t\t<meta name=viewport content=\"width=device-width, initial-scale=1\" />\n")
 	bio.put(f, "\t</head>\n")

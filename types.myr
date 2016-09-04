@@ -6,6 +6,7 @@ pkg contbuild =
 		scratch	: byte[:]
 		logfd	: std.fd
 		period	: std.time
+		htmlstyle	: byte[:]
 	;;
 
 	type target = struct
