@@ -4,6 +4,7 @@ use sys
 use "types"
 use "repo"
 use "report-html"
+use "report-email"
 
 pkg contbuild =
 	const run : (build : build# -> void)
@@ -47,7 +48,7 @@ const runonce = {build, targ
 :retry
 		if !testrun(targ, &r)
 			ok = false
-			if !ranfix
+			if !ranfix && targ.fix.len > 0
 				ranfix = true
 				runcmd(targ.fix, &r.fix)
 				goto retry
@@ -110,10 +111,10 @@ const updates = {t
 	std.slfree(err)
 	std.slfree(old)
 	std.slfree(new)
-	-> reversed(ret)
+	-> reverse(ret)
 }
 
-const reversed = {lst
+const reverse = {lst
 	for var i = 0; i < lst.len / 2; i++
 		std.swap(&lst[i], &lst[lst.len - i - 1])
 	;;
@@ -131,7 +132,11 @@ const report = {build, targ, report, status, hash
 	std.slpush(&targ._hist, (std.sldup(hash), status))
 
 	reporthtml(build, targ, report, hash);
+
 	/* annoying reports should only get fired if we change */
+	if changed
+		reportemail(build, targ, report, hash)
+	;;
 }
 
 const reset = {r

@@ -6,5 +6,83 @@ pkg contbuild =
 	const reportemail	: (b : build#, targ : target#, report : report#, hash : byte[:] -> void)
 ;;
 
-const reportemail = {b, t, r, h
+const reportemail = {b, targ, report, hash
+	var cmd, subject
+	var buf : byte[4096]
+
+	if targ.email.len == 0
+		-> void
+	;;
+	subject = std.fmt("[contbuild]: {} build {} on rev {}", \
+		targ.targ, fixedstr(targ._status), hash)
+
+	cmd = [][:]
+	std.slpush(&cmd, "mail")
+	std.slpush(&cmd, "-s")
+	std.slpush(&cmd, subject)
+	std.slpush(&cmd, targ.email)
+
+	std.put("cmd: {}\n", cmd)
+	//var f = std.try(std.openmode("/tmp/mail.try", std.Ordwr | std.Ocreat, 0o644))
+	match std.espork(cmd)
+	| `std.Ok (pid, stdin, stdout, stderr):
+		writemsg(stdin, targ, report, hash)
+		std.close(stdin)
+		match std.read(stdout, buf[:])
+		| `std.Ok n: 	std.put("stdout: {}\n", buf[:n])
+		| `std.Err e:	std.put("stdout: err: {}\n", e)
+		;;
+		std.close(stdout)
+		match std.read(stderr, buf[:])
+		| `std.Ok n: 	std.put("stderr: {}\n", buf[:n])
+		| `std.Err e:	std.put("stderr: err: {}\n", e)
+		;;
+		std.close(stderr)
+		std.wait(pid)
+		std.usleep(10*std.Sec)
+	| `std.Err e:
+		std.fput(std.Err, "could not run {}\n", cmd)
+	;;
+	std.slfree(subject)
+	std.slfree(cmd)
+}
+
+const writemsg = {fd, targ, report, hash
+	std.fput(fd, "Build {} is {} on rev {}\n", \
+		targ.targ, fixedstr(targ._status), hash)
+	std.fput(fd, "\n")
+	std.fput(fd, "build:\t{}\n", statusstr(report.build.ok))
+	std.fput(fd, "test:\t{}\n", statusstr(report.test.ok))
+	if targ.fix.len > 0
+		std.fput(fd, "fix:\t{}\n", statusstr(report.fix.ok))
+	;;
+	std.fput(fd, "clean:\t{}\n", statusstr(report.clean.ok))
+
+	writeout(fd, &report.build, "build")
+	writeout(fd, &report.test, "test")
+	if targ.fix.len > 0
+		writeout(fd, &report.fix, "fix")
+	;;
+	writeout(fd, &report.clean, "clean")
+}
+
+const writeout = {fd, cmd, phase
+	std.fput(fd, "============ {}: stdout ============\n", phase)
+	std.fput(fd, "{}\n\n", cmd.out)
+	std.fput(fd, "============ {}: stderr ============\n", phase)
+	std.fput(fd, "{}\n\n", cmd.err)
+}
+
+const fixedstr = {st
+	match st
+	| true:	-> "fixed"
+	| _:	-> "broken"
+	;;
+}
+
+const statusstr = {st
+	match st
+	| true:	-> "ok"
+	| _:	-> "fail"
+	;;
 }

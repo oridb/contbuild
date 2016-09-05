@@ -34,9 +34,13 @@ const load = {cfg
 	default.targ = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.tip = inifile.getv(ini, "", "tip", "master")
+
+	/* report options */
 	default.htmldir = inifile.getv(ini, "", "htmldir", "")
 	default.htmlroot = inifile.getv(ini, "", "htmlroot", default.htmlroot)
 	default.htmlstyle = htmlstyle
+	default.email = inifile.getv(ini, "", "email", default.email)
+
 	match inifile.get(ini, "", "build")
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
@@ -85,12 +89,14 @@ const load = {cfg
 const loadtarg = {ini, s, scratch, default
 	var repo, tip, build, clean, test, fix
 	var htmldir, htmlroot, htmlbase, htmlstyle
+	var email
 
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	tip = inifile.getv(ini, s, "tip", default.tip)
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
+	email = inifile.getv(ini, s, "email", default.email)
 	if htmlroot.len == 0
 		htmlroot = std.sldup(htmlbase)
 	;;
@@ -128,6 +134,7 @@ const loadtarg = {ini, s, scratch, default
 		.htmldir=htmldir,
 		.htmlroot=htmlroot,
 		.htmlstyle=htmlstyle,
+		.email=email,
 		._repo=std.pathcat(scratch, s),
 		._htmlbase=htmlbase,
 		._status=true

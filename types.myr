@@ -18,10 +18,13 @@ pkg contbuild =
 		test	: byte[:][:]
 		fix	: byte[:][:]
 
-		/* report options */
+		/* html report options */
 		htmldir	: byte[:]
 		htmlroot: byte[:]
 		htmlstyle	: byte[:]
+
+		/* email report options */
+		email	: byte[:]
 
 		/* computed */
 		_repo	: byte[:]

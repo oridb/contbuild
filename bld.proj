@@ -4,5 +4,6 @@ bin contbuild =
 	config.myr
 	repo.myr
 	report-html.myr
+	report-email.myr
 	types.myr
 ;;
