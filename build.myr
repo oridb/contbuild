@@ -69,7 +69,7 @@ const testrun = {t, r
 }
 
 
-const updates = {t
+const updates = {targ
 	var old, new, err, ret
 	var changed = false
 
@@ -78,7 +78,7 @@ const updates = {t
 	new = [][:]
 	ret = [][:]
 
-	match head(t)
+	match head(targ)
 	| `std.Ok r:
 		old = r
 	| `std.Err e:	
@@ -86,12 +86,12 @@ const updates = {t
 		goto error
 	;;
 
-	if !pull(t)
+	if !pull(targ)
 		goto error
 	;;
 
 
-	match head(t)
+	match head(targ)
 	| `std.Ok r:
 		new = r
 	| `std.Err e:	
@@ -99,7 +99,7 @@ const updates = {t
 		goto error
 	;;
 
-	match between(t, old, new)
+	match between(targ, old, new)
 	| `std.Ok r:
 		ret = r
 		goto done
@@ -128,7 +128,7 @@ const report = {build, targ, report, status, hash
 
 	/* update the book keeping */
 	targ._status = status
-	std.fput(build.logfd, "{} {} {}\n", hash, status, targ.targ)
+	std.fput(build.logfd, "{} {} {}\n", hash, status, targ.name)
 	std.slpush(&targ._hist, (std.sldup(hash), status))
 
 	reporthtml(build, targ, report, hash);
@@ -158,7 +158,6 @@ const set = {s, v
 }
 
 const runcmd = {cmd, r
-	std.put("{}\n", cmd)
 	r.ok = true
 	if cmd.len == 0
 		-> true

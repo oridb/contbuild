@@ -10,7 +10,7 @@ pkg contbuild =
 	;;
 
 	type target = struct
-		targ	: byte[:]
+		name	: byte[:]
 		tip	: byte[:]
 		repo	: byte[:]
 		build	: byte[:][:]

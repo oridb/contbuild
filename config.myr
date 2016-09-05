@@ -31,7 +31,7 @@ const load = {cfg
 	| `std.None:	std.fatal("unable to parse 'period'\n")
 	;;
 
-	default.targ = ""
+	default.name = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.tip = inifile.getv(ini, "", "tip", "master")
 
@@ -124,7 +124,7 @@ const loadtarg = {ini, s, scratch, default
 
 
 	-> std.mk([
-		.targ=std.sldup(s),
+		.name=std.sldup(s),
 		.repo=repo,
 		.tip=tip,
 		.build=build,
@@ -148,7 +148,7 @@ const readlog = {targs, fd
 
 	ht = std.mkht(std.strhash, std.streq)
 	for t in targs
-		std.htput(ht, t.targ, t)
+		std.htput(ht, t.name, t)
 	;;
 	f = bio.mkfile(fd, bio.Rd)
 	for ln in bio.byline(f)

@@ -5,7 +5,7 @@ use date
 use "types"
 
 pkg contbuild =
-	const reporthtml	: (b : build#, targ : target#, report : report#, hash : byte[:] -> void)
+	const reporthtml	: (build : build#, targ : target#, report : report#, hash : byte[:] -> void)
 ;;
 
 const reporthtml = {build, targ, report, hash
@@ -14,14 +14,13 @@ const reporthtml = {build, targ, report, hash
 		-> void
 	;;
 
-	std.put("generating into {}/reports/{}/{}.html\n", targ.htmldir, targ.targ, hash)
-	match openreport(targ.htmldir, targ.targ, "reports", targ.targ, hash)
+	match openreport(targ.htmldir, targ.name, "reports", targ.name, hash)
 	| `std.Ok f:
-		puthdr(f, targ.targ, targ.htmlstyle)
+		puthdr(f, targ.name, targ.htmlstyle)
 		bio.put(f, "\t<div id=main>\n")
 		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
-		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.targ)
+		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.name)
 		puthistory(f, targ)
 		putstatus(f, targ._status)
 		reportcmd(f, &report.build, "build")
@@ -59,20 +58,20 @@ const reportcmd = {f, c, phase
 	bio.put(f, "</details>\n")
 }
 
-const updateindex = {b, targ
+const updateindex = {build, targ
 	match openreport(targ.htmldir, "", "", "", "index")
 	| `std.Ok f:
-		puthdr(f, "All Builds", b.htmlstyle)
+		puthdr(f, "All Builds", build.htmlstyle)
 		bio.put(f, "\t<div id=main>\n")
-		putsidebar(f, b, targ._htmlbase)
+		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
-		for t in b.targs
+		for t in build.targs
 			if !std.sleq(targ.htmldir, t.htmldir)
 				continue
 			;;
-			bio.put(f, "\t\t<h2>{}: {}</h2>\n", t.targ, status(t._status))
+			bio.put(f, "\t\t<h2>{}: {}</h2>\n", t.name, status(t._status))
 			bio.put(f, "\t\t<p><a href={}/reports/{}/{}.html>[{}] latest build</a></p>\n", \
-				t._htmlbase, t.targ, lasthash(t), status(t._status))
+				t._htmlbase, t.name, lasthash(t), status(t._status))
 			puthistory(f, t)
 		;;
 		bio.put(f, "\t</article>\n")
@@ -110,25 +109,25 @@ const puthistory = {f, t
 		if st
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
-				lnkstyle, t._htmlbase, t.targ, hash)
+				lnkstyle, t._htmlbase, t.name, hash)
 		else
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=red>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
-				lnkstyle, t._htmlbase, t.targ, hash)
+				lnkstyle, t._htmlbase, t.name, hash)
 		;;
 		bio.put(f, "</td>\n")
 	;;
 	bio.put(f, "</tr></table>\n")
 }
 
-const putsidebar = {f, b, htmlbase
+const putsidebar = {f, build, htmlbase
 	bio.put(f, "<nav><ul>")
 	bio.put(f, "\t<li>\n")
 	bio.put(f, "\t\t<a href={}/index.html>All Builds</a>\n", htmlbase)
 	bio.put(f, "\t</li>\n")
-	for t in b.targs
+	for t in build.targs
 		bio.put(f, "\t<li>\n")
-		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", htmlbase, t.targ, lasthash(t), t.targ)
+		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", htmlbase, t.name, lasthash(t), t.name)
 		bio.put(f, "\t</li>\n")
 	;;
 	bio.put(f, "</ul></nav>")

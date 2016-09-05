@@ -3,10 +3,10 @@ use std
 use "types"
 
 pkg contbuild =
-	const reportemail	: (b : build#, targ : target#, report : report#, hash : byte[:] -> void)
+	const reportemail	: (build : build#, targ : target#, report : report#, hash : byte[:] -> void)
 ;;
 
-const reportemail = {b, targ, report, hash
+const reportemail = {build, targ, report, hash
 	var cmd, subject
 	var buf : byte[4096]
 
@@ -14,7 +14,7 @@ const reportemail = {b, targ, report, hash
 		-> void
 	;;
 	subject = std.fmt("[contbuild]: {} build {} on rev {}", \
-		targ.targ, fixedstr(targ._status), hash)
+		targ.name, fixedstr(targ._status), hash)
 
 	cmd = [][:]
 	std.slpush(&cmd, "mail")
@@ -49,7 +49,7 @@ const reportemail = {b, targ, report, hash
 
 const writemsg = {fd, targ, report, hash
 	std.fput(fd, "Build {} is {} on rev {}\n", \
-		targ.targ, fixedstr(targ._status), hash)
+		targ.name, fixedstr(targ._status), hash)
 	std.fput(fd, "\n")
 	std.fput(fd, "build:\t{}\n", statusstr(report.build.ok))
 	std.fput(fd, "test:\t{}\n", statusstr(report.test.ok))
