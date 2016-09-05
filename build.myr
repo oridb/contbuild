@@ -110,7 +110,14 @@ const updates = {t
 	std.slfree(err)
 	std.slfree(old)
 	std.slfree(new)
-	-> ret
+	-> reversed(ret)
+}
+
+const reversed = {lst
+	for var i = 0; i < lst.len / 2; i++
+		std.swap(&lst[i], &lst[lst.len - i - 1])
+	;;
+	-> lst
 }
 
 const report = {build, targ, report, status, hash
