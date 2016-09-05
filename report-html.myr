@@ -18,6 +18,7 @@ const reporthtml = {build, targ, report, hash
 	match openreport(targ.htmldir, targ.targ, "reports", targ.targ, hash)
 	| `std.Ok f:
 		puthdr(f, targ.targ, targ.htmlstyle)
+		bio.put(f, "\t<div id=main>\n")
 		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
 		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.targ)
@@ -31,6 +32,7 @@ const reporthtml = {build, targ, report, hash
 		;;
 		reportcmd(f, &report.clean, "clean")
 		bio.put(f, "\t</article>\n")
+		bio.put(f, "\t</div>\n")
 		putfooter(f)
 		bio.close(f)
 	| `std.Err e:
@@ -61,6 +63,7 @@ const updateindex = {b, targ
 	match openreport(targ.htmldir, "", "", "", "index")
 	| `std.Ok f:
 		puthdr(f, "All Builds", b.htmlstyle)
+		bio.put(f, "\t<div id=main>\n")
 		putsidebar(f, b, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
 		for t in b.targs
@@ -73,6 +76,7 @@ const updateindex = {b, targ
 			puthistory(f, t)
 		;;
 		bio.put(f, "\t</article>\n")
+		bio.put(f, "\t</div>\n")
 		putfooter(f)
 		bio.close(f)
 	| `std.Err e:
