@@ -110,10 +110,11 @@ const readcmd = {cmd
 		| `std.Ok r:
 			s = r
 			ok = true
-		| `std.Err r:
+		| `std.Err e:
 			s = std.sldup("unable to read output")
 			ok = false
 		;;
+		std.close(stdout)
 
 		match std.wait(pid)
 		| `std.Wsuccess:

@@ -177,6 +177,9 @@ const runcmd = {cmd, r
 			| `std.Wsuccess:
 			| _:	r.ok = false
 			;;
+                        std.close(stdin)
+                        std.close(stdout)
+                        std.close(stderr)
 		| `std.Err e:
 			r.ok = false
 			set(&r.err, std.fmt("could not run command {}\n", cmd))
