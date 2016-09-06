@@ -71,6 +71,7 @@ const between = {t, from, to
 		;;
 		-> `std.Ok ret
 	| `std.Err e:
+		std.slfree(range)
 		-> `std.Err e
 	;;
 }

@@ -37,7 +37,7 @@ const load = {cfg
 
 	/* report options */
 	default.htmldir = inifile.getv(ini, "", "htmldir", "")
-	default.htmlroot = inifile.getv(ini, "", "htmlroot", default.htmlroot)
+	default.htmlroot = inifile.getv(ini, "", "htmlroot", default.htmldir)
 	default.htmlstyle = htmlstyle
 	default.email = inifile.getv(ini, "", "email", default.email)
 

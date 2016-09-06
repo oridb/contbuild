@@ -14,9 +14,9 @@ pkg contbuild =
 		tip	: byte[:]
 		repo	: byte[:]
 		build	: byte[:][:]
-		clean	: byte[:][:]
 		test	: byte[:][:]
 		fix	: byte[:][:]
+		clean	: byte[:][:]
 
 		/* html report options */
 		htmldir	: byte[:]
