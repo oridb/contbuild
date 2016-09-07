@@ -87,9 +87,8 @@ const updateindex = {build, targ
 			if !std.sleq(targ.htmldir, t.htmldir)
 				continue
 			;;
-			bio.put(f, "\t\t<h2>{}: {}</h2>\n", t.name, status(t._status))
-			bio.put(f, "\t\t<p><a href={}/reports/{}/summary.html>[{}] latest build</a></p>\n", \
-				t._htmlbase, t.name, status(t._status))
+			bio.put(f, "\t\t<h2><a href={}/reports/{}/summary.html>{}: {}</a></h2>\n", \
+				t._htmlbase, t.name, t.name, status(t._status))
 			puthistory(f, t)
 		;;
 		bio.put(f, "\t</article>\n")
@@ -209,9 +208,9 @@ const openreport = {htmldir, build, base, rdir, name
 
 const status = {ok
 	if ok
-		-> "OK"
+		-> "ok"
 	else
-		-> "FAIL"
+		-> "fail"
 	;;
 }
 
