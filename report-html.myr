@@ -3,6 +3,7 @@ use bio
 use date
 
 use "types"
+use "repo"
 
 pkg contbuild =
 	const reporthtml	: (build : build#, targ : target#, report : report#, hash : byte[:] -> void)
@@ -37,6 +38,23 @@ const reporthtml = {build, targ, report, hash
 	| `std.Err e:
 		std.put("unable to open directory: {}\n", e)
 	;;
+
+	match openreport(targ.htmldir, targ.name, "reports", targ.name, "summary")
+	| `std.Ok f:
+		puthdr(f, targ.name, targ.htmlstyle)
+		bio.put(f, "\t<div id=main>\n")
+		putsidebar(f, build, targ._htmlbase)
+		bio.put(f, "\t<article>\n")
+		bio.put(f, "\t<h2>Build Log</h2>\n")
+		putsummary(f, targ)
+		bio.put(f, "\t</article>\n")
+		bio.put(f, "\t</div>\n")
+		putfooter(f)
+		bio.close(f)
+	| `std.Err e:
+		std.put("unable to open directory: {}\n", e)
+	;;
+
 	updateindex(build, targ)
 }
 
@@ -70,8 +88,8 @@ const updateindex = {build, targ
 				continue
 			;;
 			bio.put(f, "\t\t<h2>{}: {}</h2>\n", t.name, status(t._status))
-			bio.put(f, "\t\t<p><a href={}/reports/{}/{}.html>[{}] latest build</a></p>\n", \
-				t._htmlbase, t.name, lasthash(t), status(t._status))
+			bio.put(f, "\t\t<p><a href={}/reports/{}/summary.html>[{}] latest build</a></p>\n", \
+				t._htmlbase, t.name, status(t._status))
 			puthistory(f, t)
 		;;
 		bio.put(f, "\t</article>\n")
@@ -80,6 +98,30 @@ const updateindex = {build, targ
 		bio.close(f)
 	| `std.Err e:
 	;;
+}
+
+const putsummary = {f, targ
+	var s
+	bio.put(f, "<table>\n")
+	for (hash, st) in tailents(targ._hist, 20)
+		bio.put(f, "\t<tr>\n")
+		if st
+			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
+		else
+			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=red>")
+			bio.put(f, "<a href={}/reports/{}/{}.html> </a>", \
+				targ._htmlbase, targ.name, hash)
+		;;
+		bio.put(f, "<td><a href={}/reports/{}/{}.html>{}</a></td>", \
+			targ._htmlbase, targ.name, hash, hash)
+
+		s = summary(targ, hash)
+		bio.put(f, "<td><a href={}/reports/{}/{}.html>{}</a></td>", \
+			targ._htmlbase, targ.name, hash, s)
+		std.slfree(s)
+		bio.put(f, "\t</tr>\n")
+	;;
+	bio.put(f, "</table>\n")
 }
 
 const puthdr = {f, targname, style
@@ -102,20 +144,21 @@ const putstatus = {f, st
 	bio.put(f, "\t\t</div>\n")
 }
 
-const puthistory = {f, t
+const puthistory = {f, targ
 	const lnkstyle="\"display:block;width:100%;height:100%;\""
 	bio.put(f, "<table style=\"border:1px solid black;\"><tr>\n")
-	for (hash, st) in tailents(t._hist, 20)
+	for (hash, st) in tailents(targ._hist, 20)
 		if st
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
-				lnkstyle, t._htmlbase, t.name, hash)
+				lnkstyle, targ._htmlbase, targ.name, hash)
+			bio.put(f, "</td>\n")
 		else
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=red>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
-				lnkstyle, t._htmlbase, t.name, hash)
+				lnkstyle, targ._htmlbase, targ.name, hash)
+			bio.put(f, "</td>\n")
 		;;
-		bio.put(f, "</td>\n")
 	;;
 	bio.put(f, "</tr></table>\n")
 }
@@ -127,7 +170,7 @@ const putsidebar = {f, build, htmlbase
 	bio.put(f, "\t</li>\n")
 	for t in build.targs
 		bio.put(f, "\t<li>\n")
-		bio.put(f, "\t\t<a href={}/reports/{}/{}.html>{}</a>\n", htmlbase, t.name, lasthash(t), t.name)
+		bio.put(f, "\t\t<a href={}/reports/{}/summary.html>{}</a>\n", htmlbase, t.name, t.name)
 		bio.put(f, "\t</li>\n")
 	;;
 	bio.put(f, "</ul></nav>")
@@ -173,15 +216,5 @@ generic tailents = {a : @a[:], n
 		-> a
 	else
 		-> a[a.len - n : ]
-	;;
-}
-
-const lasthash = {t
-	if t._hist.len == 0
-		-> "NONE"
-	else
-		match t._hist[t._hist.len - 1]
-		| (h, _):	-> h
-		;;
 	;;
 }
