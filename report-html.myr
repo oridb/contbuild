@@ -22,8 +22,8 @@ const reporthtml = {build, targ, report, hash
 		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
 		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.name)
+		putstatus(f, targ, hash)
 		puthistory(f, targ)
-		putstatus(f, targ._status)
 		reportcmd(f, &report.build, "build")
 		reportcmd(f, &report.test, "test")
 		/* we usually don't have a fix command */
@@ -138,10 +138,14 @@ const puthdr = {f, targname, style
 	bio.put(f, "\t\t</header>\n")
 }
 
-const putstatus = {f, st
+const putstatus = {f, targ, hash
+	var s
+
+	s = summary(targ, hash)
 	bio.put(f, "\t\t<div id=\"status\">\n")
-	bio.put(f, "\t\t{}\n", status(st))
+	bio.put(f, "\t\t<p>[{}] {}: {}</p>\n", status(targ._status), hash, s)
 	bio.put(f, "\t\t</div>\n")
+	std.slfree(s)
 }
 
 const puthistory = {f, targ
