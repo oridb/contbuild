@@ -10,6 +10,8 @@ pkg contbuild =
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
 	const checkout	: (t : target#, ref : byte[:] -> bool)
 	const purge	: (t : target# -> bool)
+	const summary	: (t : target#, hash : byte[:] -> byte[:])
+	const commitmsg	: (t : target#, hash : byte[:] -> byte[:])
 ;;
 
 const clone = {t
@@ -97,6 +99,26 @@ const pull = {t
 	| `std.Err r:
 		std.slfree(r)
 		-> false
+	;;
+}
+
+const summary = {t, hash
+	-> showmsg(t, hash, "--format=%s")
+}
+
+const commitmsg = {t, hash
+	-> showmsg(t, hash, "--format=%B")
+}
+
+const showmsg = {t, hash, fmt
+	std.chdir(t._repo)
+	match readcmd(["git", "show", "-s", fmt, hash][:])
+	| `std.Ok r:
+		-> r
+	| `std.Err e:
+		std.put("error: {}\n", e)
+		std.slfree(e)
+		-> std.fmt("unknown commit {}", hash)
 	;;
 }
 
