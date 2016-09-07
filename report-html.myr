@@ -103,7 +103,7 @@ const updateindex = {build, targ
 const putsummary = {f, targ
 	var s
 	bio.put(f, "<table>\n")
-	for (hash, st) in tailents(targ._hist, 20)
+	for (hash, st) in std.byreverse(tailents(targ._hist, 20))
 		bio.put(f, "\t<tr>\n")
 		if st
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
