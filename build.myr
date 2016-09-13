@@ -12,9 +12,7 @@ pkg contbuild =
 
 const run = {build
 	for t in build.targs
-		if !std.fexists(t._repo)
-			clone(t)
-		;;
+		clone(t)
 	;;
 
 	while true
@@ -49,7 +47,7 @@ const runonce = {build, targ
 			ok = false
 			if !ranfix && targ.fix.len > 0
 				ranfix = true
-				runcmd(targ.fix, &r.fix)
+				runcmd(targ, targ.fix, &r.fix)
 				goto retry
 			;;
 		else
@@ -62,9 +60,9 @@ const runonce = {build, targ
 }
 
 const testrun = {t, r
-	-> runcmd(t.build, &r.build) && \
-		runcmd(t.test, &r.test) && \
-		runcmd(t.clean, &r.clean)
+	-> runcmd(t, t.build, &r.build) && \
+		runcmd(t, t.test, &r.test) && \
+		runcmd(t, t.clean, &r.clean)
 }
 
 
@@ -103,6 +101,8 @@ const updates = {targ
 		ret = r
 		goto done
 	| `std.Err e:
+		err = e
+		goto error
 	;;
 :error
 	std.put("unable to get updates: {}\n", err)
@@ -156,34 +156,21 @@ const set = {s, v
 	s# = v
 }
 
-const runcmd = {cmd, r
-	r.ok = true
+const runcmd = {t, cmd, r
+	set(&r.cmd, std.strjoin(cmd, " "))
 	if cmd.len == 0
 		-> true
-	else
-		set(&r.cmd, std.strjoin(cmd, " "))
-		match std.espork(cmd)
-		| `std.Ok (pid, stdin, stdout, stderr):
-			match std.fslurp(stdout)
-			| `std.Ok o:	set(&r.out, o)
-			| `std.Err e:	set(&r.out, std.fmt("could not read stdout: {}\n", e))
-			;;
-			match std.fslurp(stderr)
-			| `std.Ok o:	set(&r.err, o)
-			| `std.Err e:	set(&r.err, std.fmt("could not read stderr: {}\n", e))
-			;;
-			match std.wait(pid)
-			| `std.Wsuccess:
-			| _:	r.ok = false
-			;;
-                        std.close(stdin)
-                        std.close(stdout)
-                        std.close(stderr)
-		| `std.Err e:
-			r.ok = false
-			set(&r.err, std.fmt("could not run command {}\n", cmd))
-		;;
-		-> r.ok
 	;;
+	match readcmd(t, cmd)
+	| `std.Ok (out, err):
+		set(&r.out, out)
+		set(&r.err, err)
+		r.ok = true
+	| `std.Err (out, err):
+		set(&r.out, out)
+		set(&r.err, err)
+		r.ok = false
+	;;
+	-> r.ok
 }
 

@@ -11,9 +11,14 @@ pkg contbuild =
 
 	type target = struct
 		name	: byte[:]
+
+		/* where to fins shit */
 		tip	: byte[:]
 		repo	: byte[:]
 		scratch	: byte[:]
+		remote	: byte[:]
+
+		/* commands */
 		build	: byte[:][:]
 		test	: byte[:][:]
 		fix	: byte[:][:]

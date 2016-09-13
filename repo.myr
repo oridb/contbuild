@@ -1,5 +1,5 @@
 use std
-use sys
+use escfmt
 
 use "types"
 
@@ -12,27 +12,43 @@ pkg contbuild =
 	const purge	: (t : target# -> bool)
 	const summary	: (t : target#, hash : byte[:] -> byte[:])
 	const commitmsg	: (t : target#, hash : byte[:] -> byte[:])
+	const readcmd	: (t : target#, cmd : byte[:][:] -> \
+		std.result((byte[:], byte[:]), (byte[:], byte[:])))
 ;;
 
 const clone = {t
-	match readcmd(t._repo, ["git", "clone", t.repo, t._repo][:])
-	| `std.Ok r:
-		std.slfree(r)
+	var raw, cmd
+
+	raw = [][:]
+	if t.remote.len == 0 && std.fexists(t.scratch)
 		-> true
-	| `std.Err e:	
+	elif t.remote.len != 0
+		raw = ["test", "-e", t._repo, "||"][:]
+	;;
+
+	cmd = munge(t, t.scratch, raw, ["git", "clone", t.repo, t._repo][:])
+	match readrawcmd(t, cmd)
+	| `std.Ok (r, e):
+		std.slfree(r)
+		std.slfree(e)
+		-> true
+	| `std.Err (r, e):	
 		std.put("could not clone: {}\n", e)
+		std.slfree(r)
 		std.slfree(e)
 		-> false
 	;;
 }
 
 const purge = {t
-	match readcmd(t._repo, ["git", "clean", "-xfd"][:])
-	| `std.Ok r:
+	match readcmd(t, ["git", "clean", "-xfd"][:])
+	| `std.Ok (r, e):
 		std.slfree(r)
+		std.slfree(e)
 		-> true
-	| `std.Err e:
+	| `std.Err (r, e):
 		std.put("could not purge: {}\n", e)
+		std.slfree(r)
 		std.slfree(e)
 		-> false
 	;;
@@ -42,14 +58,16 @@ const head = {t
 	var s, tip
 
 	tip = std.fmt("refs/heads/{}", t.tip)
-	match readcmd(t._repo, ["git", "show-ref", "-s", tip][:])
-	| `std.Ok r:	
+	match readcmd(t, ["git", "show-ref", "-s", tip][:])
+	| `std.Ok (r, e):	
 		s = std.sldup(std.strstrip(r))
 		std.slfree(tip)
 		std.slfree(r)
+		std.slfree(e)
 		-> `std.Ok s
-	| `std.Err e:
+	| `std.Err (r, e):
 		std.slfree(tip)
+		std.slfree(r)
 		-> `std.Err e
 	;;
 }
@@ -62,37 +80,43 @@ const between = {t, from, to
 	;;
 	range = std.fmt("{}..{}", from, to)
 	ret = [][:]
-	match readcmd(t._repo, ["git", "rev-list", range][:])
-	| `std.Ok r:
+	match readcmd(t, ["git", "rev-list", range][:])
+	| `std.Ok (r, e):
 		std.slfree(range)
+		std.slfree(e)
 		for ln in std.bysplit(r, "\n")
 			std.slpush(&ret, std.sldup(ln))
 		;;
 		-> `std.Ok ret
-	| `std.Err e:
+	| `std.Err (r, e):
+		std.slfree(r)
 		std.slfree(range)
 		-> `std.Err e
 	;;
 }
 
 const checkout = {t, rev
-	match readcmd(t._repo, ["git", "checkout", rev][:])
-	| `std.Ok r:
+	match readcmd(t, ["git", "checkout", rev][:])
+	| `std.Ok (r, e):
 		std.slfree(r)
+		std.slfree(e)
 		-> true
-	| `std.Err e:
+	| `std.Err (r, e):
+		std.slfree(r)
 		std.slfree(e)
 		-> false
 	;;
 }
 
 const pull = {t
-	match readcmd(t._repo, ["git", "pull"][:])
-	| `std.Ok r:
+	match readcmd(t, ["git", "pull"][:])
+	| `std.Ok (r, e):
 		std.slfree(r)
+		std.slfree(e)
 		-> true
-	| `std.Err r:
+	| `std.Err (r, e):
 		std.slfree(r)
+		std.slfree(e)
 		-> false
 	;;
 }
@@ -106,47 +130,84 @@ const commitmsg = {t, hash
 }
 
 const showmsg = {t, hash, fmt
-	match readcmd(t._repo, ["git", "show", "-s", fmt, hash][:])
-	| `std.Ok r:
+	match readcmd(t, ["git", "show", "-s", fmt, hash][:])
+	| `std.Ok (r, e):
+		std.slfree(e)
 		-> r
-	| `std.Err e:
-		std.put("error: {}\n", e)
+	| `std.Err (r, e):
+		std.slfree(r)
 		std.slfree(e)
 		-> std.fmt("unknown commit {}", hash)
 	;;
 }
 
-const readcmd = {dir, cmd
-	var s, ok
-
-	if !std.chdir(dir)
-		std.put("could not chdir to {}\n", dir)
-	;;
-	match std.spork(cmd)
-	| `std.Ok (pid, stdin, stdout):
-		std.close(stdin)
-		match std.fslurp(stdout)
-		| `std.Ok r:
-			s = r
-			ok = true
-		| `std.Err e:
-			s = std.sldup("unable to read output")
-			ok = false
+const readcmd = {t, cmd
+	if t.remote.len == 0
+		if !std.chdir(t._repo)
+			-> `std.Err ("", std.fmt("could not chdir to {}\n", t._repo))
 		;;
-		std.close(stdout)
+	;;
+
+	cmd = munge(t, t._repo, [][:], cmd)
+	-> readrawcmd(t, cmd)
+}
+
+const readrawcmd = {t, cmd
+	var out, err, ret
+
+	match std.espork(cmd)
+	| `std.Ok (pid, stdin, stdout, stderr):
+		match std.fslurp(stdout)
+		| `std.Ok r:	out = r
+		| `std.Err e:	out = std.fmt("unable to read output: {}", e)
+		;;
+
+		match std.fslurp(stderr)
+		| `std.Ok e:	err = e
+		| `std.Err e:	err = std.fmt("could not read stderr: {}", e)
+		;;
 
 		match std.wait(pid)
-		| `std.Wsuccess:
-		| _:	ok = false
+		| `std.Wsuccess:	ret = `std.Ok (out, err)
+		| _:	ret = `std.Err (out, err)
 		;;
 
-		if ok
-			std.put("output: {}\n", s)
-			-> `std.Ok s
-		else
-			-> `std.Err s
-		;;
+		std.close(stdin)
+		std.close(stdout)
+		std.close(stderr)
 	| `std.Err e:
-		-> `std.Err std.sldup("unable to execute")
+		ret = `std.Err ("", std.sldup("unable to execute"))
 	;;
+	for c in cmd
+		std.slfree(c)
+	;;
+	std.slfree(cmd)
+	-> ret
+}
+
+const munge = {t, dir, raw, cmd
+	var command
+
+	command = [][:]
+	if t.remote.len == 0
+		for c in raw
+			std.slpush(&command, std.sldup(c))
+		;;
+		for c in cmd
+			std.slpush(&command, std.sldup(c))
+		;;
+	else
+		std.slpush(&command, std.sldup("ssh"))
+		std.slpush(&command, std.sldup(t.remote))
+		std.slpush(&command, std.sldup("cd"))
+		std.slpush(&command, std.fmt("{}", escfmt.sh(dir)))
+		std.slpush(&command, std.sldup("&&"))
+		for c in raw
+			std.slpush(&command, std.sldup(c))
+		;;
+		for c in cmd 
+			std.slpush(&command, std.fmt("{}", escfmt.sh(c)))
+		;;
+	;;
+	-> command
 }

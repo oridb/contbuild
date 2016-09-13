@@ -23,7 +23,6 @@ const load = {cfg
 	tmpdir = std.pathcat(std.getenvv("TMP", "/tmp"), "contbuild-work")
 	htmlstyle = inifile.getv(ini, "", "htmlstyle", "/style.css")
 	scratch = inifile.getv(ini, "", "scratch", tmpdir)
-	std.mkpath(scratch)
 
 	/* default 5 minute poll */
 	match std.intparse(inifile.getv(ini, "", "period", "300"))
@@ -34,6 +33,7 @@ const load = {cfg
 	default.name = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.tip = inifile.getv(ini, "", "tip", "master")
+	default.remote = inifile.getv(ini, "", "remote", "")
 	default.scratch = scratch
 
 	/* report options */
@@ -88,13 +88,16 @@ const load = {cfg
 }
 
 const loadtarg = {ini, s, default
-	var repo, tip, build, clean, test, fix, scratch
+	var repo, tip, remote
+	var build, clean, test, fix, scratch
 	var htmldir, htmlroot, htmlbase, htmlstyle
 	var email
 
+	tip = inifile.getv(ini, s, "tip", default.tip)
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	scratch = inifile.getv(ini, s, "scratch", default.scratch)
-	tip = inifile.getv(ini, s, "tip", default.tip)
+	remote = inifile.getv(ini, s, "remote", default.remote)
+
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
@@ -127,17 +130,21 @@ const loadtarg = {ini, s, default
 
 	-> std.mk([
 		.name=std.sldup(s),
+		.tip=tip,
 		.repo=repo,
 		.scratch=scratch,
-		.tip=tip,
+		.remote=remote,
+
 		.build=build,
 		.test=test,
 		.clean=clean,
 		.fix=fix,
+
 		.htmldir=htmldir,
 		.htmlroot=htmlroot,
 		.htmlstyle=htmlstyle,
 		.email=email,
+
 		._repo=std.pathcat(scratch, s),
 		._htmlbase=htmlbase,
 		._status=true
