@@ -34,6 +34,7 @@ const load = {cfg
 	default.name = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.tip = inifile.getv(ini, "", "tip", "master")
+	default.scratch = scratch
 
 	/* report options */
 	default.htmldir = inifile.getv(ini, "", "htmldir", "")
@@ -62,7 +63,7 @@ const load = {cfg
 	targs = [][:]
 	for s in inifile.bysection(ini)
 		if s.len != 0
-			std.slpush(&targs, loadtarg(ini, s, scratch, &default))
+			std.slpush(&targs, loadtarg(ini, s, &default))
 		;;
 	;;
 
@@ -86,12 +87,13 @@ const load = {cfg
 	])
 }
 
-const loadtarg = {ini, s, scratch, default
-	var repo, tip, build, clean, test, fix
+const loadtarg = {ini, s, default
+	var repo, tip, build, clean, test, fix, scratch
 	var htmldir, htmlroot, htmlbase, htmlstyle
 	var email
 
 	repo = inifile.getv(ini, s, "repo", default.repo)
+	scratch = inifile.getv(ini, s, "scratch", default.scratch)
 	tip = inifile.getv(ini, s, "tip", default.tip)
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
@@ -101,7 +103,7 @@ const loadtarg = {ini, s, scratch, default
 		htmlroot = std.sldup(htmlbase)
 	;;
 	if std.hasprefix(htmldir, htmlroot)
-		htmlbase = std.fmt("/{}", htmldir[htmlroot.len:])
+		htmlbase = std.pathcat("/", htmldir[htmlroot.len:])
 	;;
 
 
@@ -126,6 +128,7 @@ const loadtarg = {ini, s, scratch, default
 	-> std.mk([
 		.name=std.sldup(s),
 		.repo=repo,
+		.scratch=scratch,
 		.tip=tip,
 		.build=build,
 		.test=test,

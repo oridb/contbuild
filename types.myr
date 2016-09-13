@@ -13,6 +13,7 @@ pkg contbuild =
 		name	: byte[:]
 		tip	: byte[:]
 		repo	: byte[:]
+		scratch	: byte[:]
 		build	: byte[:][:]
 		test	: byte[:][:]
 		fix	: byte[:][:]

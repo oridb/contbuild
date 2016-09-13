@@ -15,7 +15,7 @@ pkg contbuild =
 ;;
 
 const clone = {t
-	match readcmd(["git", "clone", t.repo, t._repo][:])
+	match readcmd(t._repo, ["git", "clone", t.repo, t._repo][:])
 	| `std.Ok r:
 		std.slfree(r)
 		-> true
@@ -27,8 +27,7 @@ const clone = {t
 }
 
 const purge = {t
-	std.chdir(t._repo)
-	match readcmd(["git", "clean", "-xfd"][:])
+	match readcmd(t._repo, ["git", "clean", "-xfd"][:])
 	| `std.Ok r:
 		std.slfree(r)
 		-> true
@@ -42,9 +41,8 @@ const purge = {t
 const head = {t
 	var s, tip
 
-	std.chdir(t._repo)
 	tip = std.fmt("refs/heads/{}", t.tip)
-	match readcmd(["git", "show-ref", "-s", tip][:])
+	match readcmd(t._repo, ["git", "show-ref", "-s", tip][:])
 	| `std.Ok r:	
 		s = std.sldup(std.strstrip(r))
 		std.slfree(tip)
@@ -62,10 +60,9 @@ const between = {t, from, to
 	if std.sleq(from, to)
 		-> `std.Ok [][:]
 	;;
-	std.chdir(t._repo)
 	range = std.fmt("{}..{}", from, to)
 	ret = [][:]
-	match readcmd(["git", "rev-list", range][:])
+	match readcmd(t._repo, ["git", "rev-list", range][:])
 	| `std.Ok r:
 		std.slfree(range)
 		for ln in std.bysplit(r, "\n")
@@ -79,8 +76,7 @@ const between = {t, from, to
 }
 
 const checkout = {t, rev
-	std.chdir(t._repo)
-	match readcmd(["git", "checkout", rev][:])
+	match readcmd(t._repo, ["git", "checkout", rev][:])
 	| `std.Ok r:
 		std.slfree(r)
 		-> true
@@ -91,8 +87,7 @@ const checkout = {t, rev
 }
 
 const pull = {t
-	std.chdir(t._repo)
-	match readcmd(["git", "pull"][:])
+	match readcmd(t._repo, ["git", "pull"][:])
 	| `std.Ok r:
 		std.slfree(r)
 		-> true
@@ -111,8 +106,7 @@ const commitmsg = {t, hash
 }
 
 const showmsg = {t, hash, fmt
-	std.chdir(t._repo)
-	match readcmd(["git", "show", "-s", fmt, hash][:])
+	match readcmd(t._repo, ["git", "show", "-s", fmt, hash][:])
 	| `std.Ok r:
 		-> r
 	| `std.Err e:
@@ -122,10 +116,12 @@ const showmsg = {t, hash, fmt
 	;;
 }
 
-const readcmd = {cmd
+const readcmd = {dir, cmd
 	var s, ok
 
-	std.put("{}\n", cmd)
+	if !std.chdir(dir)
+		std.put("could not chdir to {}\n", dir)
+	;;
 	match std.spork(cmd)
 	| `std.Ok (pid, stdin, stdout):
 		std.close(stdin)

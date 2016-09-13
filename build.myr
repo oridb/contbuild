@@ -13,7 +13,6 @@ pkg contbuild =
 const run = {build
 	for t in build.targs
 		if !std.fexists(t._repo)
-			std.chdir(build.scratch)
 			clone(t)
 		;;
 	;;
