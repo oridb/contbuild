@@ -207,11 +207,11 @@ const openreport = {htmldir, build, base, rdir, name
 	-> r
 }
 
-const status = {ok
-	if ok
-		-> "ok"
-	else
-		-> "fail"
+const status = {s
+	match s
+	| `Norun:	-> "NO RUN"
+	| `Succ:	-> "OK"
+	| `Fail:	-> "FAIL"
 	;;
 }
 

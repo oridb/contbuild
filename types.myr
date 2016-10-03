@@ -35,7 +35,7 @@ pkg contbuild =
 		/* computed */
 		_repo	: byte[:]
 		_hist	: (byte[:], bool)[:]
-		_status	: bool
+		_status	: cmdstatus
 		_htmlbase	: byte[:]
 	;;
 
@@ -50,6 +50,12 @@ pkg contbuild =
 		cmd	: byte[:]
 		out	: byte[:]
 		err	: byte[:]
-		ok	: bool
+		ok	: cmdstatus
+	;;
+
+	type cmdstatus = union
+		`Norun
+		`Succ
+		`Fail
 	;;
 ;;

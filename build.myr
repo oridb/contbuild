@@ -30,10 +30,10 @@ const runonce = {build, targ
 	var ranfix, ok
 
 	r = [
-		.build=[.cmd="", .out="", .err="", .ok=true],
-		.test=[.cmd="", .out="", .err="", .ok=true],
-		.fix=[.cmd="", .out="", .err="", .ok=true],
-		.clean=[.cmd="", .out="", .err="", .ok=true],
+		.build=[.cmd="", .out="", .err="", .ok=`Norun],
+		.test=[.cmd="", .out="", .err="", .ok=`Norun],
+		.fix=[.cmd="", .out="", .err="", .ok=`Norun],
+		.clean=[.cmd="", .out="", .err="", .ok=`Norun],
 	]
 
 	for u in updates(targ)
@@ -123,10 +123,13 @@ const reverse = {lst
 const report = {build, targ, report, status, hash
 	var changed
 
-	changed = targ._status != status
+	changed = isok(targ._status) != status
 
 	/* update the book keeping */
-	targ._status = status
+	match status
+	| true:	targ._status = `Succ
+	| _:	targ._status = `Fail
+	;;
 	std.fput(build.logfd, "{} {} {}\n", hash, status, targ.name)
 	std.slpush(&targ._hist, (std.sldup(hash), status))
 
@@ -148,7 +151,14 @@ const reset = {r
 const resetcmd = {c
 	set(&c.out, "")
 	set(&c.err, "")
-	c.ok = true
+	c.ok = `Norun
+}
+
+const isok = {s
+	match s
+	| `Succ:	-> true
+	| _:	-> false
+	;;
 }
 
 const set = {s, v
@@ -165,12 +175,12 @@ const runcmd = {t, cmd, r
 	| `std.Ok (out, err):
 		set(&r.out, out)
 		set(&r.err, err)
-		r.ok = true
+		r.ok = `Succ
 	| `std.Err (out, err):
 		set(&r.out, out)
 		set(&r.err, err)
-		r.ok = false
+		r.ok = `Fail
 	;;
-	-> r.ok
+	-> isok(r.ok)
 }
 

@@ -147,7 +147,7 @@ const loadtarg = {ini, s, default
 
 		._repo=std.pathcat(scratch, s),
 		._htmlbase=htmlbase,
-		._status=true
+		._status=`Succ
 	])
 }
 
@@ -178,10 +178,10 @@ const addresult = {ht, hash, status, targ
 	match (tt, status)
 	| (`std.Some t, "true"):
 		std.slpush(&t._hist, (std.sldup(hash), true))
-		t._status = true
+		t._status = `Succ
 	| (`std.Some t, "false"):
 		std.slpush(&t._hist, (std.sldup(hash), false))
-		t._status = false
+		t._status = `Fail
 	| _:
 		std.put("skip:\t{}: {}: {}\n", hash, status, targ)
 	;;

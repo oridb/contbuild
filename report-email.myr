@@ -75,14 +75,16 @@ const writeout = {fd, cmd, phase
 
 const fixedstr = {st
 	match st
-	| true:	-> "fixed"
-	| _:	-> "broken"
+	| `Norun:	-> "failed to run"
+	| `Succ:	-> "fixed"
+	| `Fail:	-> "broken"
 	;;
 }
 
 const statusstr = {st
 	match st
-	| true:	-> "ok"
-	| _:	-> "fail"
+	| `Norun:	-> "not run"
+	| `Succ:	-> "ok"
+	| `Fail:	-> "fail"
 	;;
 }

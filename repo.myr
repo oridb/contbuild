@@ -20,7 +20,7 @@ const clone = {t
 	var raw, cmd
 
 	raw = [][:]
-	if t.remote.len == 0 && std.fexists(t.scratch)
+	if t.remote.len == 0 && std.fexists(t._repo)
 		-> true
 	elif t.remote.len != 0
 		raw = ["test", "-e", t._repo, "||"][:]
