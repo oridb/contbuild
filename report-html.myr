@@ -60,7 +60,10 @@ const reporthtml = {build, targ, report, hash
 
 const reportcmd = {f, c, phase
 	bio.put(f, "<h3>{}: {}: {}</h3>\n", status(c.ok), phase, c.cmd)
-
+	match c.ok
+	| `Norun: -> void
+	| _:	/* continue */
+	;;
 	bio.put(f, "<summary>STDOUT</summary>\n")
 	bio.put(f, "<details>\n")
 	bio.put(f, "<p><code><pre>\n")
