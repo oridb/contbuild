@@ -64,15 +64,15 @@ const reportcmd = {f, c, phase
 	| `Norun: -> void
 	| _:	/* continue */
 	;;
-	bio.put(f, "<summary>STDOUT</summary>\n")
 	bio.put(f, "<details>\n")
+	bio.put(f, "<summary>STDOUT</summary>\n")
 	bio.put(f, "<p><code><pre>\n")
 	bio.put(f, "{}\n\n", c.out)
 	bio.put(f, "</code></p>\n")
 	bio.put(f, "</details>\n")
 
-	bio.put(f, "<summary>STDERR</summary>\n")
 	bio.put(f, "<details>\n")
+	bio.put(f, "<summary>STDERR</summary>\n")
 	bio.put(f, "<p><code><pre>\n")
 	bio.put(f, "{}\n\n", c.err)
 	bio.put(f, "</code></p>\n")
