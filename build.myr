@@ -78,12 +78,12 @@ const updates = {targ
 	match head(targ)
 	| `std.Ok r:
 		old = r
-	| `std.Err e:	
+	| `std.Err e:
 		err = e
 		goto error
 	;;
 
-	if !pull(targ)
+	if !sync(targ)
 		goto error
 	;;
 
@@ -91,7 +91,7 @@ const updates = {targ
 	match head(targ)
 	| `std.Ok r:
 		new = r
-	| `std.Err e:	
+	| `std.Err e:
 		err = e
 		goto error
 	;;
@@ -183,4 +183,3 @@ const runcmd = {t, cmd, r
 	;;
 	-> isok(r.ok)
 }
-

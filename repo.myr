@@ -6,7 +6,7 @@ use "types"
 pkg contbuild =
 	const clone	: (t : target# -> bool)
 	const head	: (t : target# -> std.result(byte[:], byte[:]))
-	const pull	: (t : target# -> bool)
+	const sync	: (t : target# -> bool)
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
 	const checkout	: (t : target#, ref : byte[:] -> bool)
 	const purge	: (t : target# -> bool)
@@ -32,7 +32,7 @@ const clone = {t
 		std.slfree(r)
 		std.slfree(e)
 		-> true
-	| `std.Err (r, e):	
+	| `std.Err (r, e):
 		std.put("could not clone: {}\n", e)
 		std.slfree(r)
 		std.slfree(e)
@@ -59,7 +59,7 @@ const head = {t
 
 	tip = std.fmt("refs/heads/{}", t.tip)
 	match readcmd(t, ["git", "show-ref", "-s", tip][:])
-	| `std.Ok (r, e):	
+	| `std.Ok (r, e):
 		s = std.sldup(std.strstrip(r))
 		std.slfree(tip)
 		std.slfree(r)
@@ -108,12 +108,26 @@ const checkout = {t, rev
 	;;
 }
 
-const pull = {t
-	match readcmd(t, ["git", "pull"][:])
+const sync = {t
+	var branch
+
+	branch = std.fmt("origin/{}", t.tip)
+	match readcmd(t, ["git", "fetch"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
-		-> true
+		match readcmd(t, ["git", "reset", "--hard", branch][:])
+		| `std.Ok (r1, e1):
+			std.slfree(branch)
+			std.slfree(r1)
+			std.slfree(e1)
+			-> true
+		| `std.Err (r1, e1):
+			std.slfree(r1)
+			std.slfree(e1)
+			std.slfree(branch)
+			-> false
+		;;
 	| `std.Err (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -205,7 +219,7 @@ const munge = {t, dir, raw, cmd
 		for c in raw
 			std.slpush(&command, std.sldup(c))
 		;;
-		for c in cmd 
+		for c in cmd
 			std.slpush(&command, std.fmt("{}", escfmt.sh(c)))
 		;;
 	;;
