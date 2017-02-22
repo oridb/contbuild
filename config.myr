@@ -68,6 +68,7 @@ const load = {cfg
 	;;
 
 	/* read the build log */
+	std.mkpath(scratch)
 	logfile = std.pathcat(scratch, "contbuild.log")
 	match std.openmode(logfile, std.Ordwr | std.Ocreat, 0o644)
 	| `std.Ok fd:	logfd = fd
@@ -102,11 +103,11 @@ const loadtarg = {ini, s, default
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
 	email = inifile.getv(ini, s, "email", default.email)
-	if htmlroot.len == 0
-		htmlroot = std.sldup(htmlbase)
-	;;
 	if std.hasprefix(htmldir, htmlroot)
 		htmlbase = std.pathcat("/", htmldir[htmlroot.len:])
+	;;
+	if htmlroot.len == 0
+		htmlroot = std.sldup(htmlbase)
 	;;
 
 
