@@ -12,6 +12,7 @@ pkg contbuild =
 
 const run = {build
 	for t in build.targs
+		std.put("cloning {}...\n", t.repo)
 		clone(t)
 	;;
 
@@ -42,6 +43,7 @@ const runonce = {build, targ
 		if !checkout(targ, u)
 			continue
 		;;
+		std.put("test {}:{}\n", targ.name, u)
 :retry
 		if !testrun(targ, &r)
 			ok = false
