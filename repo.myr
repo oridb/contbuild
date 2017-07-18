@@ -111,11 +111,11 @@ const checkout = {t, rev
 const sync = {t
 	var branch
 
-	branch = std.fmt("origin/{}", t.tip)
 	match readcmd(t, ["git", "fetch"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
+		branch = std.fmt("origin/{}", t.tip)
 		match readcmd(t, ["git", "reset", "--hard", branch][:])
 		| `std.Ok (r1, e1):
 			std.slfree(branch)
