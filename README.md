@@ -1,4 +1,4 @@
-# [Contbuild](https://myrlang.org/contbuild)
+# [Contbuild](https://eigenstate.org/contbuild/)
 
 Contbuild is a simple continuous build system that can build any projects.
 It is simple and easy to set up, and can run on most Unix systems, and
@@ -33,4 +33,4 @@ something like:
 		# in any rule
 		repo=git://c9x.me/qbe.git
 
-Full documentation is available on [the website](https://myrlang.org/contbuild)
+Full documentation is available on [the website](https://eigenstate.org/contbuild/)
