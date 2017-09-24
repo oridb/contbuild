@@ -84,7 +84,7 @@ const between = {t, from, to
 	| `std.Ok (r, e):
 		std.slfree(range)
 		std.slfree(e)
-		for ln in std.bysplit(r, "\n")
+		for ln : std.bysplit(r, "\n")
 			std.slpush(&ret, std.sldup(ln))
 		;;
 		-> `std.Ok ret
@@ -192,7 +192,7 @@ const readrawcmd = {t, cmd
 	| `std.Err e:
 		ret = `std.Err ("", std.sldup("unable to execute"))
 	;;
-	for c in cmd
+	for c : cmd
 		std.slfree(c)
 	;;
 	std.slfree(cmd)
@@ -204,10 +204,10 @@ const munge = {t, dir, raw, cmd
 
 	command = [][:]
 	if t.remote.len == 0
-		for c in raw
+		for c : raw
 			std.slpush(&command, std.sldup(c))
 		;;
-		for c in cmd
+		for c : cmd
 			std.slpush(&command, std.sldup(c))
 		;;
 	else
@@ -216,10 +216,10 @@ const munge = {t, dir, raw, cmd
 		std.slpush(&command, std.sldup("cd"))
 		std.slpush(&command, std.fmt("{}", escfmt.sh(dir)))
 		std.slpush(&command, std.sldup("&&"))
-		for c in raw
+		for c : raw
 			std.slpush(&command, std.sldup(c))
 		;;
-		for c in cmd
+		for c : cmd
 			std.slpush(&command, std.fmt("{}", escfmt.sh(c)))
 		;;
 	;;

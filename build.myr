@@ -11,13 +11,13 @@ pkg contbuild =
 ;;
 
 const run = {build
-	for t in build.targs
+	for t : build.targs
 		std.put("cloning {}...\n", t.repo)
 		clone(t)
 	;;
 
 	while true
-		for t in build.targs
+		for t : build.targs
 			std.chdir(t._repo)
 			runonce(build, t)
 
@@ -37,7 +37,7 @@ const runonce = {build, targ
 		.clean=[.cmd="", .out="", .err="", .ok=`Norun],
 	]
 
-	for u in updates(targ)
+	for u : updates(targ)
 		ranfix = false
 		reset(&r)
 		if !checkout(targ, u)

@@ -61,7 +61,7 @@ const load = {cfg
 
 	/* read the targets */
 	targs = [][:]
-	for s in inifile.bysection(ini)
+	for s : inifile.bysection(ini)
 		if s.len != 0
 			std.slpush(&targs, loadtarg(ini, s, &default))
 		;;
@@ -158,11 +158,11 @@ const readlog = {targs, fd
 	var ht, f, rec : byte[:][:]
 
 	ht = std.mkht(std.strhash, std.streq)
-	for t in targs
+	for t : targs
 		std.htput(ht, t.name, t)
 	;;
 	f = bio.mkfile(fd, bio.Rd)
-	for ln in bio.byline(f)
+	for ln : bio.byline(f)
 		rec = std.bstrtok(recbuf[:], ln)
 		if rec.len == 3
 			addresult(ht, rec[0], rec[1], rec[2])
