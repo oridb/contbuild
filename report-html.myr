@@ -86,7 +86,7 @@ const updateindex = {build, targ
 		bio.put(f, "\t<div id=main>\n")
 		putsidebar(f, build, targ._htmlbase)
 		bio.put(f, "\t<article>\n")
-		for t in build.targs
+		for t : build.targs
 			if !std.sleq(targ.htmldir, t.htmldir)
 				continue
 			;;
@@ -105,7 +105,7 @@ const updateindex = {build, targ
 const putsummary = {f, targ
 	var s
 	bio.put(f, "<table>\n")
-	for (hash, st) in std.byreverse(tailents(targ._hist, 20))
+	for (hash, st) : std.byreverse(tailents(targ._hist, 20))
 		bio.put(f, "\t<tr>\n")
 		if st
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
@@ -154,7 +154,7 @@ const putstatus = {f, targ, hash
 const puthistory = {f, targ
 	const lnkstyle="\"display:block;width:100%;height:100%;\""
 	bio.put(f, "<table style=\"border:1px solid black;\"><tr>\n")
-	for (hash, st) in tailents(targ._hist, 20)
+	for (hash, st) : tailents(targ._hist, 20)
 		if st
 			bio.put(f, "<td style=\"width:1em;height:1em;border:1px solid white;\" bgcolor=green>")
 			bio.put(f, "<a style={} href={}/reports/{}/{}.html> </a>", \
@@ -175,7 +175,7 @@ const putsidebar = {f, build, htmlbase
 	bio.put(f, "\t<li>\n")
 	bio.put(f, "\t\t<a href={}/index.html>All Builds</a>\n", htmlbase)
 	bio.put(f, "\t</li>\n")
-	for t in build.targs
+	for t : build.targs
 		bio.put(f, "\t<li>\n")
 		bio.put(f, "\t\t<a href={}/reports/{}/summary.html>{}</a>\n", htmlbase, t.name, t.name)
 		bio.put(f, "\t</li>\n")

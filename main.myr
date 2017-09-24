@@ -9,13 +9,13 @@ const main = {args
 
 	cmd = std.optparse(args, &[
 		.opts=[
-			[.opt='c', .arg="config", 
+			[.opt='c', .arg="config",
 				.desc="configuration file to use (default: contbuild.ini)"]
 		][:]
 	])
 
 	cfg = "contbuild.ini"
-	for opt in cmd.opts
+	for opt : cmd.opts
 		match opt
 		| ('c', c):	cfg = c
 		| _:	std.die("unreachable")
