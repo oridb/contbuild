@@ -157,7 +157,7 @@ const readlog = {targs, fd
 	var recbuf : byte[:][3]
 	var ht, f, rec : byte[:][:]
 
-	ht = std.mkht(std.strhash, std.streq)
+	ht = std.mkht()
 	for t : targs
 		std.htput(ht, t.name, t)
 	;;
