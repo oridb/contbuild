@@ -1,5 +1,6 @@
 use std
 use sys
+use bio
 
 use "types"
 use "repo"
@@ -12,53 +13,45 @@ pkg contbuild =
 
 const run = {build
 	for t : build.targs
-		std.put("cloning {}...\n", t.repo)
+		std.put("cloning {}...", t.repo)
 		clone(t)
+		std.put("done\n")
 	;;
 
 	while true
 		for t : build.targs
+			sync(t)
 			std.chdir(t._repo)
 			runonce(build, t)
 
 		;;
+		std.put("run done, delaying {}\n", build.period/std.Sec)
 		std.usleep(build.period)
 	;;
 }
 
 const runonce = {build, targ
 	var r : report
-	var ranfix, ok
+	var ok, brlist
 
 	r = [
 		.build=[.cmd="", .out="", .err="", .ok=`Norun],
 		.test=[.cmd="", .out="", .err="", .ok=`Norun],
-		.fix=[.cmd="", .out="", .err="", .ok=`Norun],
 		.clean=[.cmd="", .out="", .err="", .ok=`Norun],
 	]
 
-	for u : updates(targ)
-		ranfix = false
-		reset(&r)
-		if !checkout(targ, u)
-			continue
-		;;
-		std.put("test {}:{}\n", targ.name, u)
-:retry
-		if !testrun(targ, &r)
-			ok = false
-			if !ranfix && targ.fix.len > 0
-				ranfix = true
-				runcmd(targ, targ.fix, &r.fix)
-				goto retry
+	brlist = std.tryv(branches(targ), [][:])
+	for (cm, br) : brlist
+		for u : updates(targ, br, cm)
+			reset(&r)
+			if !checkout(targ, u)
+				continue
 			;;
-		else
-			ok = true
+			purge(targ)
+			ok = testrun(targ, &r)
+			report(build, targ, &r, ok, u, br)
 		;;
-		report(build, targ, &r, ok, u)
-		purge(targ)
 	;;
-	checkout(targ, targ.tip)
 }
 
 const testrun = {t, r
@@ -67,52 +60,24 @@ const testrun = {t, r
 		runcmd(t, t.clean, &r.clean)
 }
 
-
-const updates = {targ
-	var old, new, err, ret
-	var changed = false
-
-	err = ""
-	old = [][:]
-	new = [][:]
-	ret = [][:]
-
-	match head(targ)
-	| `std.Ok r:
-		old = r
-	| `std.Err e:
-		err = e
-		goto error
+const updates = {targ, branch, commit
+	match std.htget(targ._built, branch)
+	| `std.None: 
+		std.htput(targ._built, std.sldup(branch), std.sldup(commit))
+		-> std.sldup([std.sldup(commit)][:])
+	| `std.Some old:
+		match between(targ, old, commit)
+		| `std.Ok r:
+			std.slfree(old)
+			std.htput(targ._built, branch, std.sldup(commit))
+			-> reverse(r)
+		| `std.Err err:
+			std.put("{}: unable to get updates for {}: {}\n",
+			    targ.name, branch, err)
+			std.slfree(err)
+			-> [][:]
+		;;
 	;;
-
-	if !sync(targ)
-		goto error
-	;;
-
-
-	match head(targ)
-	| `std.Ok r:
-		new = r
-	| `std.Err e:
-		err = e
-		goto error
-	;;
-
-	match between(targ, old, new)
-	| `std.Ok r:
-		ret = r
-		goto done
-	| `std.Err e:
-		err = e
-		goto error
-	;;
-:error
-	std.put("{}: unable to get updates: {}\n", targ.name, err)
-:done
-	std.slfree(err)
-	std.slfree(old)
-	std.slfree(new)
-	-> reverse(ret)
 }
 
 const reverse = {lst
@@ -122,7 +87,7 @@ const reverse = {lst
 	-> lst
 }
 
-const report = {build, targ, report, status, hash
+const report = {build, targ, report, status, hash, branch
 	var changed
 
 	changed = isok(targ._status) != status
@@ -132,7 +97,7 @@ const report = {build, targ, report, status, hash
 	| true:	targ._status = `Succ
 	| _:	targ._status = `Fail
 	;;
-	std.fput(build.logfd, "{} {} {}\n", hash, status, targ.name)
+	std.fput(build.logfd, "{} {} {} {}\n", hash, status, targ.name, branch)
 	std.slpush(&targ._hist, (std.sldup(hash), status))
 
 	reporthtml(build, targ, report, hash);
@@ -146,7 +111,6 @@ const report = {build, targ, report, status, hash
 const reset = {r
 	resetcmd(&r.build)
 	resetcmd(&r.test)
-	resetcmd(&r.fix)
 	resetcmd(&r.clean)
 }
 
@@ -170,6 +134,7 @@ const set = {s, v
 
 const runcmd = {t, cmd, r
 	set(&r.cmd, std.strjoin(cmd, " "))
+	std.put("run {}\n", r.cmd)
 	if cmd.len == 0
 		-> true
 	;;

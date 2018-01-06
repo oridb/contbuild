@@ -32,7 +32,6 @@ const load = {cfg
 
 	default.name = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
-	default.tip = inifile.getv(ini, "", "tip", "master")
 	default.remote = inifile.getv(ini, "", "remote", "")
 	default.scratch = scratch
 
@@ -89,12 +88,11 @@ const load = {cfg
 }
 
 const loadtarg = {ini, s, default
-	var repo, tip, remote
+	var repo, remote
 	var build, clean, test, fix, scratch
 	var htmldir, htmlroot, htmlbase, htmlstyle
 	var email
 
-	tip = inifile.getv(ini, s, "tip", default.tip)
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	scratch = inifile.getv(ini, s, "scratch", default.scratch)
 	remote = inifile.getv(ini, s, "remote", default.remote)
@@ -109,7 +107,6 @@ const loadtarg = {ini, s, default
 	if htmlroot.len == 0
 		htmlroot = std.sldup(htmlbase)
 	;;
-
 
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
@@ -131,7 +128,6 @@ const loadtarg = {ini, s, default
 
 	-> std.mk([
 		.name=std.sldup(s),
-		.tip=tip,
 		.repo=repo,
 		.scratch=scratch,
 		.remote=remote,
@@ -148,13 +144,14 @@ const loadtarg = {ini, s, default
 
 		._repo=std.pathcat(scratch, s),
 		._htmlbase=htmlbase,
-		._status=`Succ
+		._status=`Succ,
+		._built=std.mkht(),
 	])
 }
 
 
 const readlog = {targs, fd
-	var recbuf : byte[:][3]
+	var recbuf : byte[:][4]
 	var ht, f, rec : byte[:][:]
 
 	ht = std.mkht()
@@ -164,23 +161,25 @@ const readlog = {targs, fd
 	f = bio.mkfile(fd, bio.Rd)
 	for ln : bio.byline(f)
 		rec = std.bstrtok(recbuf[:], ln)
-		if rec.len == 3
-			addresult(ht, rec[0], rec[1], rec[2])
+		if rec.len == 4
+			addresult(ht, rec[0], rec[1], rec[2], rec[3])
 		;;
 	;;
 	bio.free(f)
 	std.htfree(ht)
 }
 
-const addresult = {ht, hash, status, targ
+const addresult = {ht, hash, status, targ, branch
 	var tt
 
 	tt = std.htget(ht, std.strstrip(targ))
 	match (tt, status)
 	| (`std.Some t, "true"):
+		std.htput(t._built, std.sldup(branch), std.sldup(hash))
 		std.slpush(&t._hist, (std.sldup(hash), true))
 		t._status = `Succ
 	| (`std.Some t, "false"):
+		std.htput(t._built, std.sldup(branch), std.sldup(hash))
 		std.slpush(&t._hist, (std.sldup(hash), false))
 		t._status = `Fail
 	| _:

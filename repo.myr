@@ -5,7 +5,8 @@ use "types"
 
 pkg contbuild =
 	const clone	: (t : target# -> bool)
-	const head	: (t : target# -> std.result(byte[:], byte[:]))
+	const branches	: (t : target# -> std.result((byte[:], byte[:])[:], byte[:]))
+	const head	: (t : target#, tip : byte[:] -> std.result(byte[:], byte[:]))
 	const sync	: (t : target# -> bool)
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
 	const checkout	: (t : target#, ref : byte[:] -> bool)
@@ -20,6 +21,7 @@ const clone = {t
 	var raw, cmd
 
 	raw = [][:]
+	std.put("exists {}: {}\n", t._repo, std.fexists(t._repo))
 	if t.remote.len == 0 && std.fexists(t._repo)
 		-> true
 	elif t.remote.len != 0
@@ -54,19 +56,41 @@ const purge = {t
 	;;
 }
 
-const head = {t
-	var s, tip
+const branches = {t
+	var branches
+	var sp : byte[:][2]
 
-	tip = std.fmt("refs/heads/{}", t.tip)
+	branches = [][:]
+	std.put("reading branches...\n")
+	match readcmd(t, ["git", "for-each-ref", "--format=%(objectname);%(refname)", "refs/remotes/"][:])
+	| `std.Ok (r, e):
+		std.slfree(e)
+		for b : std.bysplit(r, "\n")
+			std.bstrsplit(sp[:], b, ";")
+			sp[0] = std.strstrip(sp[0])
+			sp[1] = std.strstrip(sp[1])
+			std.slpush(&branches, (std.sldup(sp[0]), std.sldup(sp[1])))
+		;;
+		std.slfree(r)
+		-> `std.Ok branches
+	| `std.Err (r, e):
+		std.put("e: {}\n", e)
+		std.slfree(r)
+		-> `std.Err e
+	;;
+}
+
+const head = {t, tip
+	var s
+
+	std.put("getting head {}\n", tip)
 	match readcmd(t, ["git", "show-ref", "-s", tip][:])
 	| `std.Ok (r, e):
 		s = std.sldup(std.strstrip(r))
-		std.slfree(tip)
 		std.slfree(r)
 		std.slfree(e)
 		-> `std.Ok s
 	| `std.Err (r, e):
-		std.slfree(tip)
 		std.slfree(r)
 		-> `std.Err e
 	;;
@@ -79,6 +103,7 @@ const between = {t, from, to
 		-> `std.Ok [][:]
 	;;
 	range = std.fmt("{}..{}", from, to)
+	std.put("getting range {}\n", range)
 	ret = [][:]
 	match readcmd(t, ["git", "rev-list", range][:])
 	| `std.Ok (r, e):
@@ -96,12 +121,13 @@ const between = {t, from, to
 }
 
 const checkout = {t, rev
-	match readcmd(t, ["git", "checkout", rev][:])
+	match readcmd(t, ["git", "checkout", "-f", rev][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
 		-> true
 	| `std.Err (r, e):
+		std.put("could not check out {}: {}\n", rev, e)
 		std.slfree(r)
 		std.slfree(e)
 		-> false
@@ -109,25 +135,11 @@ const checkout = {t, rev
 }
 
 const sync = {t
-	var branch
-
 	match readcmd(t, ["git", "fetch"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
-		branch = std.fmt("origin/{}", t.tip)
-		match readcmd(t, ["git", "reset", "--hard", branch][:])
-		| `std.Ok (r1, e1):
-			std.slfree(branch)
-			std.slfree(r1)
-			std.slfree(e1)
-			-> true
-		| `std.Err (r1, e1):
-			std.slfree(r1)
-			std.slfree(e1)
-			std.slfree(branch)
-			-> false
-		;;
+		-> true
 	| `std.Err (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -156,6 +168,8 @@ const showmsg = {t, hash, fmt
 }
 
 const readcmd = {t, cmd
+	var r
+
 	if t.remote.len == 0
 		if !std.chdir(t._repo)
 			-> `std.Err ("", std.fmt("could not chdir to {}\n", t._repo))
@@ -163,7 +177,8 @@ const readcmd = {t, cmd
 	;;
 
 	cmd = munge(t, t._repo, [][:], cmd)
-	-> readrawcmd(t, cmd)
+	r = readrawcmd(t, cmd)
+	-> r
 }
 
 const readrawcmd = {t, cmd

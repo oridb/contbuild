@@ -10,33 +10,33 @@ pkg contbuild =
 	;;
 
 	type target = struct
-		name	: byte[:]
+		name		: byte[:]
 
-		/* where to fins shit */
-		tip	: byte[:]
-		repo	: byte[:]
-		scratch	: byte[:]
-		remote	: byte[:]
+		/* where to find shit */
+		repo		: byte[:]
+		scratch		: byte[:]
+		remote		: byte[:]
 
 		/* commands */
-		build	: byte[:][:]
-		test	: byte[:][:]
-		fix	: byte[:][:]
-		clean	: byte[:][:]
+		build		: byte[:][:]
+		test		: byte[:][:]
+		fix		: byte[:][:]
+		clean		: byte[:][:]
 
 		/* html report options */
-		htmldir	: byte[:]
-		htmlroot: byte[:]
+		htmldir		: byte[:]
+		htmlroot	: byte[:]
 		htmlstyle	: byte[:]
 
 		/* email report options */
-		email	: byte[:]
+		email		: byte[:]
 
 		/* computed */
-		_repo	: byte[:]
-		_hist	: (byte[:], bool)[:]
-		_status	: cmdstatus
+		_repo		: byte[:]
+		_hist		: (byte[:], bool)[:]
+		_status		: cmdstatus
 		_htmlbase	: byte[:]
+		_built		: std.htab(byte[:], byte[:])#
 	;;
 
 	type report = struct
