@@ -53,16 +53,10 @@ const writemsg = {fd, targ, report, hash
 	std.fput(fd, "\n")
 	std.fput(fd, "build:\t{}\n", statusstr(report.build.ok))
 	std.fput(fd, "test:\t{}\n", statusstr(report.test.ok))
-	if targ.fix.len > 0
-		std.fput(fd, "fix:\t{}\n", statusstr(report.fix.ok))
-	;;
 	std.fput(fd, "clean:\t{}\n", statusstr(report.clean.ok))
 
 	writeout(fd, &report.build, "build")
 	writeout(fd, &report.test, "test")
-	if targ.fix.len > 0
-		writeout(fd, &report.fix, "fix")
-	;;
 	writeout(fd, &report.clean, "clean")
 }
 

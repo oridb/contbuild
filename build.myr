@@ -6,6 +6,7 @@ use "types"
 use "repo"
 use "report-html"
 use "report-email"
+use "report-cmd"
 
 pkg contbuild =
 	const run : (build : build# -> void)
@@ -25,7 +26,7 @@ const run = {build
 			runonce(build, t)
 
 		;;
-		std.put("run done, delaying {}\n", build.period/std.Sec)
+		std.put("run done, delaying {}s\n", build.period/std.Sec)
 		std.usleep(build.period)
 	;;
 }
@@ -100,9 +101,8 @@ const report = {build, targ, report, status, hash, branch
 	std.fput(build.logfd, "{} {} {} {}\n", hash, status, targ.name, branch)
 	std.slpush(&targ._hist, (std.sldup(hash), status))
 
-	reporthtml(build, targ, report, hash);
-
-	/* annoying reports should only get fired if we change */
+	reporthtml(build, targ, report, hash)
+	reportcmd(build, targ, report, hash)
 	if changed
 		reportemail(build, targ, report, hash)
 	;;

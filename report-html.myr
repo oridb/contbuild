@@ -27,10 +27,6 @@ const reporthtml = {build, targ, report, hash
 		putstatus(f, targ, hash)
 		reportcmd(f, &report.build, "build")
 		reportcmd(f, &report.test, "test")
-		/* we usually don't have a fix command */
-		if targ.fix.len > 0
-			reportcmd(f, &report.fix, "fix")
-		;;
 		reportcmd(f, &report.clean, "clean")
 		bio.put(f, "\t</article>\n")
 		bio.put(f, "\t</div>\n")

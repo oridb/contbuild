@@ -1,0 +1,28 @@
+use std
+use bio
+use date
+use iter
+
+use "types"
+use "repo"
+
+pkg contbuild =
+	const reportcmd	: (build : build#, targ : target#, report : report#, hash : byte[:] -> void)
+;;
+
+const reportcmd = {build, targ, report, hash
+	/* only write this if we've configured html */
+	if targ.report.len == 0
+		-> void
+	;;
+	std.put("running {}", targ.report)
+	std.setenv("CB_COMMIT", hash)
+	std.setenv("CB_NAME", targ.name)
+	match targ._status
+	| `Norun:	std.setenv("CB_STATUS", "run-failed")
+	| `Succ:	std.setenv("CB_STATUS", "success")
+	| `Fail:	std.setenv("CB_STATUS", "failure")
+	;;
+	std.run(targ.report)
+}
+

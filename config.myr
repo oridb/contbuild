@@ -45,17 +45,17 @@ const load = {cfg
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
 	;;
-	match inifile.get(ini, "", "clean")
-	| `std.Some c:	default.clean = std.strtok(c)
-	| `std.None:	default.clean = std.sldup(["make", "clean"][:])
-	;;
 	match inifile.get(ini, "", "test")
 	| `std.Some t:	default.test = std.strtok(t)
 	| `std.None:	default.test = std.sldup(["make", "check"][:])
 	;;
-	match inifile.get(ini, "", "fix")
-	| `std.Some t:	default.fix = std.strtok(t)
-	| `std.None:	default.fix = [][:]
+	match inifile.get(ini, "", "clean")
+	| `std.Some c:	default.clean = std.strtok(c)
+	| `std.None:	default.clean = std.sldup(["make", "clean"][:])
+	;;
+	match inifile.get(ini, "", "report")
+	| `std.Some t:	default.report = std.strtok(t)
+	| `std.None:	default.report = [][:]
 	;;
 
 	/* read the targets */
@@ -88,15 +88,15 @@ const load = {cfg
 }
 
 const loadtarg = {ini, s, default
+	var scratch, htmldir, htmlroot, htmlbase, htmlstyle
+	var build, clean, test, report
 	var repo, remote
-	var build, clean, test, fix, scratch
-	var htmldir, htmlroot, htmlbase, htmlstyle
 	var email
 
+	htmlbase = ""
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	scratch = inifile.getv(ini, s, "scratch", default.scratch)
 	remote = inifile.getv(ini, s, "remote", default.remote)
-
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
@@ -120,9 +120,9 @@ const loadtarg = {ini, s, default
 	| `std.Some c:	clean = std.strtok(c)
 	| `std.None:	clean = default.clean
 	;;
-	match inifile.get(ini, s, "fix")
-	| `std.Some f:	fix = std.strtok(f)
-	| `std.None:	fix = default.fix
+	match inifile.get(ini, s, "report")
+	| `std.Some r:	report = std.strtok(r)
+	| `std.None:	report = default.report
 	;;
 
 
@@ -135,7 +135,7 @@ const loadtarg = {ini, s, default
 		.build=build,
 		.test=test,
 		.clean=clean,
-		.fix=fix,
+		.report=report,
 
 		.htmldir=htmldir,
 		.htmlroot=htmlroot,

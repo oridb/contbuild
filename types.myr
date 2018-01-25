@@ -20,8 +20,8 @@ pkg contbuild =
 		/* commands */
 		build		: byte[:][:]
 		test		: byte[:][:]
-		fix		: byte[:][:]
 		clean		: byte[:][:]
+		report		: byte[:][:]
 
 		/* html report options */
 		htmldir		: byte[:]
@@ -31,7 +31,7 @@ pkg contbuild =
 		/* email report options */
 		email		: byte[:]
 
-		/* computed */
+		/* computed values */
 		_repo		: byte[:]
 		_hist		: (byte[:], bool)[:]
 		_status		: cmdstatus
