@@ -23,6 +23,7 @@ const reportcmd = {build, targ, report, hash
 	| `Succ:	std.setenv("CB_STATUS", "success")
 	| `Fail:	std.setenv("CB_STATUS", "failure")
 	;;
+	std.put("run {j= }\n", targ.report)
 	std.run(targ.report)
 }
 

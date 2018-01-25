@@ -21,7 +21,6 @@ const clone = {t
 	var raw, cmd
 
 	raw = [][:]
-	std.put("exists {}: {}\n", t._repo, std.fexists(t._repo))
 	if t.remote.len == 0 && std.fexists(t._repo)
 		-> true
 	elif t.remote.len != 0
@@ -61,7 +60,6 @@ const branches = {t
 	var sp : byte[:][2]
 
 	branches = [][:]
-	std.put("reading branches...\n")
 	match readcmd(t, ["git", "for-each-ref", "--format=%(objectname);%(refname)", "refs/remotes/"][:])
 	| `std.Ok (r, e):
 		std.slfree(e)
@@ -74,7 +72,6 @@ const branches = {t
 		std.slfree(r)
 		-> `std.Ok branches
 	| `std.Err (r, e):
-		std.put("e: {}\n", e)
 		std.slfree(r)
 		-> `std.Err e
 	;;
@@ -83,7 +80,6 @@ const branches = {t
 const head = {t, tip
 	var s
 
-	std.put("getting head {}\n", tip)
 	match readcmd(t, ["git", "show-ref", "-s", tip][:])
 	| `std.Ok (r, e):
 		s = std.sldup(std.strstrip(r))
@@ -127,7 +123,6 @@ const checkout = {t, rev
 		std.slfree(e)
 		-> true
 	| `std.Err (r, e):
-		std.put("could not check out {}: {}\n", rev, e)
 		std.slfree(r)
 		std.slfree(e)
 		-> false
