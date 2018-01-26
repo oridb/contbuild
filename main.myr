@@ -1,4 +1,5 @@
 use std
+use sys
 
 use "types"
 use "config"
@@ -6,6 +7,7 @@ use "build"
 
 const main = {args
 	var cmd, cfg, b
+	var sa, osa, mask
 
 	cmd = std.optparse(args, &[
 		.opts=[
@@ -13,6 +15,15 @@ const main = {args
 				.desc="configuration file to use (default: contbuild.ini)"]
 		][:]
 	])
+
+	std.slfill(mask.bits[:], 0)
+	sa = [
+	        .handler = ({;} : byte#),
+	        .flags = sys.Sarestart,
+	        .mask = mask
+	]
+	sys.sigaction(sys.Sigpipe, &sa, &osa)
+
 
 	cfg = "contbuild.ini"
 	for opt : cmd.opts
