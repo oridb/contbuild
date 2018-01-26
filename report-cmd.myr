@@ -11,19 +11,22 @@ pkg contbuild =
 ;;
 
 const reportcmd = {build, targ, report, hash
+	var cmd
+
 	/* only write this if we've configured html */
 	if targ.report.len == 0
 		-> void
 	;;
-	std.put("running {}", targ.report)
-	std.setenv("CB_COMMIT", hash)
-	std.setenv("CB_NAME", targ.name)
+	cmd = std.sldup(targ.report)
+	std.slpush(&cmd, targ.name)
+	std.slpush(&cmd, hash)
 	match targ._status
-	| `Norun:	std.setenv("CB_STATUS", "run-failed")
-	| `Succ:	std.setenv("CB_STATUS", "success")
-	| `Fail:	std.setenv("CB_STATUS", "failure")
+	| `Norun:	std.slpush(&cmd, "run-failed")
+	| `Succ:	std.slpush(&cmd, "success")
+	| `Fail:	std.slpush(&cmd, "failure")
 	;;
 	std.put("run {j= }\n", targ.report)
 	std.run(targ.report)
+	std.slfree(cmd)
 }
 
