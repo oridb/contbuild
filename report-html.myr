@@ -142,7 +142,12 @@ const putstatus = {f, targ, hash
 
 	s = commitmsg(targ, hash)
 	bio.put(f, "\t\t<div id=\"status\">\n")
-	bio.put(f, "\t\t<p>[{}] {}</p>\n", status(targ._status), hash)
+	if targ.commiturl.len == 0
+		bio.put(f, "\t\t<p>[{}] {}</p>\n", status(targ._status), hash)
+	else
+		bio.put(f, "\t\t<p>[{}] <a href={}{}>{}</a>",
+		    status(targ._status), targ.commiturl, hash, hash)
+	;;
 	bio.put(f, "\t\t<p><pre>{}</pre></p>\n", s)
 	bio.put(f, "\t\t</div>\n")
 	std.slfree(s)

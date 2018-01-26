@@ -27,6 +27,7 @@ pkg contbuild =
 		htmldir		: byte[:]
 		htmlroot	: byte[:]
 		htmlstyle	: byte[:]
+		commiturl	: byte[:]
 
 		/* email report options */
 		email		: byte[:]

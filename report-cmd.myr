@@ -25,8 +25,8 @@ const reportcmd = {build, targ, report, hash
 	| `Succ:	std.slpush(&cmd, "success")
 	| `Fail:	std.slpush(&cmd, "failure")
 	;;
-	std.put("run {j= }\n", targ.report)
-	std.run(targ.report)
+	std.put("run {j= }\n", cmd)
+	std.run(cmd)
 	std.slfree(cmd)
 }
 

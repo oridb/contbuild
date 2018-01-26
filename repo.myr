@@ -60,7 +60,8 @@ const branches = {t
 	var sp : byte[:][2]
 
 	branches = [][:]
-	match readcmd(t, ["git", "for-each-ref", "--format=%(objectname);%(refname)", "refs/remotes/"][:])
+	match readcmd(t, ["git", "for-each-ref", 
+		"--format=%(objectname);%(refname)", "refs/remotes/"][:])
 	| `std.Ok (r, e):
 		std.slfree(e)
 		for b : std.bysplit(r, "\n")
@@ -130,7 +131,7 @@ const checkout = {t, rev
 }
 
 const sync = {t
-	match readcmd(t, ["git", "fetch"][:])
+	match readcmd(t, ["git", "fetch", "--all"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)

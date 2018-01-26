@@ -44,6 +44,7 @@ const runonce = {build, targ
 	brlist = std.tryv(branches(targ), [][:])
 	for (cm, br) : brlist
 		for u : updates(targ, br, cm)
+			std.put("testing {}:{}\n", br, cm)
 			reset(&r)
 			if !checkout(targ, u)
 				continue

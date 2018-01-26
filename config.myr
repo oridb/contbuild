@@ -39,6 +39,7 @@ const load = {cfg
 	default.htmldir = inifile.getv(ini, "", "htmldir", "")
 	default.htmlroot = inifile.getv(ini, "", "htmlroot", default.htmldir)
 	default.htmlstyle = htmlstyle
+	default.commiturl = inifile.getv(ini, "", "commiturl", "")
 	default.email = inifile.getv(ini, "", "email", default.email)
 
 	match inifile.get(ini, "", "build")
@@ -89,9 +90,9 @@ const load = {cfg
 
 const loadtarg = {ini, s, default
 	var scratch, htmldir, htmlroot, htmlbase, htmlstyle
+	var commiturl, email
 	var build, clean, test, report
 	var repo, remote
-	var email
 
 	htmlbase = ""
 	repo = inifile.getv(ini, s, "repo", default.repo)
@@ -100,6 +101,7 @@ const loadtarg = {ini, s, default
 	htmldir = inifile.getv(ini, s, "htmldir", default.htmldir)
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
+	commiturl = inifile.getv(ini, s, "commiturl", default.commiturl)
 	email = inifile.getv(ini, s, "email", default.email)
 	if std.hasprefix(htmldir, htmlroot)
 		htmlbase = std.pathcat("/", htmldir[htmlroot.len:])
@@ -140,6 +142,7 @@ const loadtarg = {ini, s, default
 		.htmldir=htmldir,
 		.htmlroot=htmlroot,
 		.htmlstyle=htmlstyle,
+		.commiturl=commiturl,
 		.email=email,
 
 		._repo=std.pathcat(scratch, s),
