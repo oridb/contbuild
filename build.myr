@@ -44,6 +44,9 @@ const runonce = {build, targ
 	brlist = std.tryv(branches(targ), [][:])
 	for (cm, br) : brlist
 		for u : updates(targ, br, cm)
+			if std.hthas(targ._commitstatus, u)
+				continue
+			;;
 			std.put("testing {}:{}\n", br, cm)
 			reset(&r)
 			if !checkout(targ, u)
@@ -52,6 +55,7 @@ const runonce = {build, targ
 			purge(targ)
 			ok = testrun(targ, &r)
 			report(build, targ, &r, ok, u, br)
+			std.htput(targ._commitstatus, u, ok)
 		;;
 	;;
 }

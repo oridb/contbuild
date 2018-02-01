@@ -38,6 +38,7 @@ pkg contbuild =
 		_status		: cmdstatus
 		_htmlbase	: byte[:]
 		_built		: std.htab(byte[:], byte[:])#
+		_commitstatus	: std.htab(byte[:], bool)#
 	;;
 
 	type report = struct

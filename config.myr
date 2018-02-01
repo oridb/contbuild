@@ -149,6 +149,7 @@ const loadtarg = {ini, s, default
 		._htmlbase=htmlbase,
 		._status=`Succ,
 		._built=std.mkht(),
+		._commitstatus=std.mkht(),
 	])
 }
 
@@ -179,10 +180,12 @@ const addresult = {ht, hash, status, targ, branch
 	match (tt, status)
 	| (`std.Some t, "true"):
 		std.htput(t._built, std.sldup(branch), std.sldup(hash))
+		std.htput(t._commitstatus, std.sldup(hash), true)
 		std.slpush(&t._hist, (std.sldup(hash), true))
 		t._status = `Succ
 	| (`std.Some t, "false"):
 		std.htput(t._built, std.sldup(branch), std.sldup(hash))
+		std.htput(t._commitstatus, std.sldup(hash), false)
 		std.slpush(&t._hist, (std.sldup(hash), false))
 		t._status = `Fail
 	| _:
