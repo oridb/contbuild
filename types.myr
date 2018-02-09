@@ -18,6 +18,7 @@ pkg contbuild =
 		remote		: byte[:]
 
 		/* commands */
+		setup		: byte[:][:]
 		build		: byte[:][:]
 		test		: byte[:][:]
 		clean		: byte[:][:]
@@ -42,9 +43,9 @@ pkg contbuild =
 	;;
 
 	type report = struct
+		setup	: cmdreport
 		build	: cmdreport
 		test	: cmdreport
-		fix	: cmdreport
 		clean	: cmdreport
 	;;
 

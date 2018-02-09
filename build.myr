@@ -61,7 +61,8 @@ const runonce = {build, targ
 }
 
 const testrun = {t, r
-	-> runcmd(t, t.build, &r.build) && \
+	-> runcmd(t, t.setup, &r.setup) && \
+		runcmd(t, t.build, &r.build) && \
 		runcmd(t, t.test, &r.test) && \
 		runcmd(t, t.clean, &r.clean)
 }
@@ -139,10 +140,10 @@ const set = {s, v
 
 const runcmd = {t, cmd, r
 	set(&r.cmd, std.strjoin(cmd, " "))
-	std.put("run {}\n", r.cmd)
 	if cmd.len == 0
 		-> true
 	;;
+	std.put("run {}\n", r.cmd)
 	match readcmd(t, cmd)
 	| `std.Ok (out, err):
 		set(&r.out, out)

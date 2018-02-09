@@ -1,4 +1,5 @@
 use std
+use sys
 use escfmt
 
 use "types"
@@ -179,27 +180,51 @@ const readcmd = {t, cmd
 
 const readrawcmd = {t, cmd
 	var out, err, ret
+	var pfd : sys.pollfd[:]
+	var buf : byte[8192]
 
 	match std.espork(cmd)
 	| `std.Ok (pid, stdin, stdout, stderr):
-		match std.fslurp(stdout)
-		| `std.Ok r:	out = r
-		| `std.Err e:	out = std.fmt("unable to read output: {}", e)
+		std.close(stdin) /* give it an early EOF */
+		out = ""
+		err = ""
+		pfd = [][:]
+		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
+		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
+		while pfd.len != 0
+			if sys.poll(pfd, -1) < 0
+				break
+			;;
+			for var i = 0; i < pfd.len; i++
+				var p = &pfd[i]
+				if p.revents != 0
+					p.revents = 0
+					if p.fd == (stdout : sys.fd)
+						match std.read(stdout, buf[:])
+						| `std.Ok 0:	std.sldel(&pfd, i)
+						| `std.Ok n:	std.sljoin(&out, buf[:n])
+						| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+						;;
+					elif p.fd == (stderr : sys.fd)
+						match std.read(stderr, buf[:])
+						| `std.Ok 0:	std.sldel(&pfd, i)
+						| `std.Ok n:	std.sljoin(&err, buf[:n])
+						| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+						;;
+					;;
+				;;
+			;;
 		;;
-
-		match std.fslurp(stderr)
-		| `std.Ok e:	err = e
-		| `std.Err e:	err = std.fmt("could not read stderr: {}", e)
-		;;
-
 		match std.wait(pid)
-		| `std.Wsuccess:	ret = `std.Ok (out, err)
-		| _:	ret = `std.Err (out, err)
+		| `std.Wsuccess:
+			ret = `std.Ok (out, err)
+		| _:    
+			ret = `std.Err (out, err)
 		;;
 
-		std.close(stdin)
 		std.close(stdout)
 		std.close(stderr)
+		std.slfree(pfd)
 	| `std.Err e:
 		ret = `std.Err ("", std.sldup("unable to execute"))
 	;;
