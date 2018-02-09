@@ -186,8 +186,8 @@ const readrawcmd = {t, cmd
 	match std.espork(cmd)
 	| `std.Ok (pid, stdin, stdout, stderr):
 		std.close(stdin) /* give it an early EOF */
-		out = ""
-		err = ""
+		out = std.slalloc(0)
+		err = std.slalloc(0)
 		pfd = [][:]
 		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
 		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
@@ -197,21 +197,20 @@ const readrawcmd = {t, cmd
 			;;
 			for var i = 0; i < pfd.len; i++
 				var p = &pfd[i]
-				if p.revents != 0
-					p.revents = 0
-					if p.fd == (stdout : sys.fd)
-						match std.read(stdout, buf[:])
-						| `std.Ok 0:	std.sldel(&pfd, i)
-						| `std.Ok n:	std.sljoin(&out, buf[:n])
-						| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
-						;;
-					elif p.fd == (stderr : sys.fd)
-						match std.read(stderr, buf[:])
-						| `std.Ok 0:	std.sldel(&pfd, i)
-						| `std.Ok n:	std.sljoin(&err, buf[:n])
-						| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
-						;;
+				if p.revents != 0 && p.fd == (stdout : sys.fd)
+					match std.read(stdout, buf[:])
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	std.sljoin(&out, buf[:n])
+					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
 					;;
+					break
+				elif p.revents != 0 && p.fd == (stderr : sys.fd)
+					match std.read(stderr, buf[:])
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	std.sljoin(&err, buf[:n])
+					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+					;;
+					break
 				;;
 			;;
 		;;
