@@ -119,6 +119,7 @@ const between = {t, from, to
 }
 
 const checkout = {t, rev
+	std.put("checkout {}\n", rev)
 	match readcmd(t, ["git", "checkout", "-f", rev][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
@@ -178,44 +179,53 @@ const readcmd = {t, cmd
 	-> r
 }
 
+const Wnohang = 1
 const readrawcmd = {t, cmd
-	var out, err, ret
+	var res, st, out, err, ret
 	var pfd : sys.pollfd[:]
 	var buf : byte[8192]
 
 	match std.espork(cmd)
 	| `std.Ok (pid, stdin, stdout, stderr):
 		std.close(stdin) /* give it an early EOF */
-		out = std.slalloc(0)
-		err = std.slalloc(0)
+		res = 0
+		st = 0
+		out = ""
+		err = ""
 		pfd = [][:]
-		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
-		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollerr, .revents=0])
+		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
+		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
 		while pfd.len != 0
-			if sys.poll(pfd, -1) < 0
+			res = sys.waitpid((pid : sys.pid), &st, Wnohang)
+			if sys.poll(pfd, 10000) < 0
 				break
 			;;
+			
 			for var i = 0; i < pfd.len; i++
 				var p = &pfd[i]
 				if p.revents != 0 && p.fd == (stdout : sys.fd)
 					match std.read(stdout, buf[:])
-					| `std.Ok 0:	std.sldel(&pfd, i)
-					| `std.Ok n:	std.sljoin(&out, buf[:n])
 					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	out = std.sljoin(&out, buf[:n])
 					;;
 					break
 				elif p.revents != 0 && p.fd == (stderr : sys.fd)
 					match std.read(stderr, buf[:])
-					| `std.Ok 0:	std.sldel(&pfd, i)
-					| `std.Ok n:	std.sljoin(&err, buf[:n])
 					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	err = std.sljoin(&err, buf[:n])
 					;;
 					break
 				;;
 			;;
+			if res != 0
+				break
+			;;
 		;;
-		match std.wait(pid)
-		| `std.Wsuccess:
+
+		match sys.waitstatus(st)
+		| `sys.Waitexit 0:
 			ret = `std.Ok (out, err)
 		| _:    
 			ret = `std.Err (out, err)

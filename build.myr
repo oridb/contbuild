@@ -115,6 +115,7 @@ const report = {build, targ, report, status, hash, branch
 }
 
 const reset = {r
+	resetcmd(&r.setup)
 	resetcmd(&r.build)
 	resetcmd(&r.test)
 	resetcmd(&r.clean)
@@ -139,10 +140,10 @@ const set = {s, v
 }
 
 const runcmd = {t, cmd, r
-	set(&r.cmd, std.strjoin(cmd, " "))
 	if cmd.len == 0
 		-> true
 	;;
+	set(&r.cmd, std.strjoin(cmd, " "))
 	std.put("run {}\n", r.cmd)
 	match readcmd(t, cmd)
 	| `std.Ok (out, err):

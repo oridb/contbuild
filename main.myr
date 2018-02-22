@@ -24,7 +24,6 @@ const main = {args
 	]
 	sys.sigaction(sys.Sigpipe, &sa, &osa)
 
-
 	cfg = "contbuild.ini"
 	for opt : cmd.opts
 		match opt
@@ -36,4 +35,5 @@ const main = {args
 	b = contbuild.load(cfg)
 	contbuild.run(b)
 }
+
 

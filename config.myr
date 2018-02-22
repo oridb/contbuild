@@ -42,6 +42,10 @@ const load = {cfg
 	default.commiturl = inifile.getv(ini, "", "commiturl", "")
 	default.email = inifile.getv(ini, "", "email", default.email)
 
+	match inifile.get(ini, "", "setup")
+	| `std.Some s:	default.setup = std.strtok(s)
+	| `std.None:	default.setup = [][:]
+	;;
 	match inifile.get(ini, "", "build")
 	| `std.Some b:	default.build = std.strtok(b)
 	| `std.None:	default.build = std.sldup(["make"][:])
@@ -91,7 +95,7 @@ const load = {cfg
 const loadtarg = {ini, s, default
 	var scratch, htmldir, htmlroot, htmlbase, htmlstyle
 	var commiturl, email
-	var build, clean, test, report
+	var setup, build, clean, test, report
 	var repo, remote
 
 	htmlbase = ""
@@ -110,6 +114,10 @@ const loadtarg = {ini, s, default
 		htmlroot = std.sldup(htmlbase)
 	;;
 
+	match inifile.get(ini, s, "setup")
+	| `std.Some p:	setup = std.strtok(p)
+	| `std.None:	setup = default.setup
+	;;
 	match inifile.get(ini, s, "build")
 	| `std.Some b:	build = std.strtok(b)
 	| `std.None:	build = default.build
@@ -134,6 +142,7 @@ const loadtarg = {ini, s, default
 		.scratch=scratch,
 		.remote=remote,
 
+		.setup=setup,
 		.build=build,
 		.test=test,
 		.clean=clean,
