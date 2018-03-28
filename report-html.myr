@@ -25,6 +25,7 @@ const reporthtml = {build, targ, report, hash
 		bio.put(f, "\t<h2>Build results: {}</h2>\n", targ.name)
 		puthistory(f, targ)
 		putstatus(f, targ, hash)
+		reportcmd(f, &report.setup, "setup")
 		reportcmd(f, &report.build, "build")
 		reportcmd(f, &report.test, "test")
 		reportcmd(f, &report.clean, "clean")

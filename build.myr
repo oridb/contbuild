@@ -36,6 +36,7 @@ const runonce = {build, targ
 	var ok, brlist
 
 	r = [
+		.setup=[.cmd="", .out="", .err="", .ok=`Norun],
 		.build=[.cmd="", .out="", .err="", .ok=`Norun],
 		.test=[.cmd="", .out="", .err="", .ok=`Norun],
 		.clean=[.cmd="", .out="", .err="", .ok=`Norun],
