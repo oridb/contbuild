@@ -195,9 +195,10 @@ const readrawcmd = {t, cmd
 		pfd = [][:]
 		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
 		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
-		while pfd.len != 0
+		while true
 			res = sys.waitpid((pid : sys.pid), &st, Wnohang)
-			if sys.poll(pfd, 10000) < 0
+			/* No point in waiting if the child has already exited. */
+			if res != 0 || sys.poll(pfd, 1000) < 0
 				break
 			;;
 			
