@@ -140,7 +140,7 @@ const checkout = {t, dir, rev
 			-> false
 		;;
 	;;
-	match readcmd(t, t._repo, ["git", "checkout", "-f", rev][:])
+	match readcmd(t, dir, ["git", "checkout", "-f", rev][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
