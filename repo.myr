@@ -5,17 +5,21 @@ use escfmt
 use "types"
 
 pkg contbuild =
+	/* these guys work on the main repo */
 	const clone	: (t : target# -> bool)
 	const branches	: (t : target# -> std.result((byte[:], byte[:])[:], byte[:]))
 	const head	: (t : target#, tip : byte[:] -> std.result(byte[:], byte[:]))
 	const sync	: (t : target# -> bool)
 	const between	: (t : target#, from : byte[:], to : byte[:] -> std.result(byte[:][:], byte[:]))
-	const checkout	: (t : target#, ref : byte[:] -> bool)
-	const purge	: (t : target# -> bool)
 	const summary	: (t : target#, hash : byte[:] -> byte[:])
 	const commitmsg	: (t : target#, hash : byte[:] -> byte[:])
-	const readcmd	: (t : target#, cmd : byte[:][:] -> \
-		std.result((byte[:], byte[:]), (byte[:], byte[:])))
+
+	/* these guys work on scratch repos in 'dir' */
+	const checkout	: (t : target#, dir : byte[:], ref : byte[:] -> bool)
+	const purge	: (t : target#, dir : byte[:] -> bool)
+
+	const readcmd	: (t : target#, dir : byte[:], cmd : byte[:][:] -> \
+	    std.result((byte[:], byte[:]), (byte[:], byte[:])))
 ;;
 
 const clone = {t
@@ -29,7 +33,7 @@ const clone = {t
 	;;
 
 	cmd = munge(t, t.scratch, raw, ["git", "clone", t.repo, t._repo][:])
-	match readrawcmd(t, cmd)
+	match readrawcmd(t, t.scratch, cmd)
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -42,8 +46,8 @@ const clone = {t
 	;;
 }
 
-const purge = {t
-	match readcmd(t, ["git", "clean", "-xfd"][:])
+const purge = {t, dir
+	match readcmd(t, dir, ["git", "clean", "-xfd"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -61,7 +65,7 @@ const branches = {t
 	var sp : byte[:][2]
 
 	branches = [][:]
-	match readcmd(t, ["git", "for-each-ref", 
+	match readcmd(t, t._repo, ["git", "for-each-ref", 
 		"--format=%(objectname);%(refname)", "refs/remotes/"][:])
 	| `std.Ok (r, e):
 		std.slfree(e)
@@ -82,7 +86,7 @@ const branches = {t
 const head = {t, tip
 	var s
 
-	match readcmd(t, ["git", "show-ref", "-s", tip][:])
+	match readcmd(t, t._repo, ["git", "show-ref", "-s", tip][:])
 	| `std.Ok (r, e):
 		s = std.sldup(std.strstrip(r))
 		std.slfree(r)
@@ -103,7 +107,7 @@ const between = {t, from, to
 	range = std.fmt("{}..{}", from, to)
 	std.put("getting range {}\n", range)
 	ret = [][:]
-	match readcmd(t, ["git", "rev-list", range][:])
+	match readcmd(t, t._repo, ["git", "rev-list", range][:])
 	| `std.Ok (r, e):
 		std.slfree(range)
 		std.slfree(e)
@@ -118,9 +122,25 @@ const between = {t, from, to
 	;;
 }
 
-const checkout = {t, rev
+const checkout = {t, dir, rev
+	var d, exists
+
 	std.put("checkout {}\n", rev)
-	match readcmd(t, ["git", "checkout", "-f", rev][:])
+	d = std.pathcat(dir, ".git")
+	exists = std.fexists(d)
+	std.slfree(d)
+	if !exists
+		match readcmd(t, dir, ["git", "clone", "--shared", t._repo, "."][:])
+		| `std.Ok (r, e):
+			std.slfree(r)
+			std.slfree(e)
+		| `std.Err (r, e):
+			std.slfree(r)
+			std.slfree(e)
+			-> false
+		;;
+	;;
+	match readcmd(t, t._repo, ["git", "checkout", "-f", rev][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -133,7 +153,7 @@ const checkout = {t, rev
 }
 
 const sync = {t
-	match readcmd(t, ["git", "fetch", "--all"][:])
+	match readcmd(t, t._repo, ["git", "fetch", "--all"][:])
 	| `std.Ok (r, e):
 		std.slfree(r)
 		std.slfree(e)
@@ -154,7 +174,7 @@ const commitmsg = {t, hash
 }
 
 const showmsg = {t, hash, fmt
-	match readcmd(t, ["git", "show", "-s", fmt, hash][:])
+	match readcmd(t, t._repo, ["git", "show", "-s", fmt, hash][:])
 	| `std.Ok (r, e):
 		std.slfree(e)
 		-> r
@@ -165,27 +185,22 @@ const showmsg = {t, hash, fmt
 	;;
 }
 
-const readcmd = {t, cmd
+const readcmd = {t, dir, cmd
 	var r
 
-	if t.remote.len == 0
-		if !std.chdir(t._repo)
-			-> `std.Err ("", std.fmt("could not chdir to {}\n", t._repo))
-		;;
-	;;
-
 	cmd = munge(t, t._repo, [][:], cmd)
-	r = readrawcmd(t, cmd)
+	r = readrawcmd(t, dir, cmd)
 	-> r
 }
 
 const Wnohang = 1
-const readrawcmd = {t, cmd
+const readrawcmd = {t, dir, cmd
 	var res, st, out, err, ret
 	var pfd : sys.pollfd[:]
 	var buf : byte[8192]
 
-	match std.espork(cmd)
+	std.put("dir={} run {j= }\n", dir, cmd)
+	match std.esporkdir(cmd, dir)
 	| `std.Ok (pid, stdin, stdout, stderr):
 		std.close(stdin) /* give it an early EOF */
 		res = 0
@@ -271,3 +286,4 @@ const munge = {t, dir, raw, cmd
 	;;
 	-> command
 }
+

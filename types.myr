@@ -1,4 +1,5 @@
 use std
+use thread
 
 pkg contbuild =
 	type build = struct
@@ -7,6 +8,9 @@ pkg contbuild =
 		logfd	: std.fd
 		period	: std.time
 		htmlstyle	: byte[:]
+		reportmtx	: thread.mutex
+		jobsem		: thread.sem
+		jobid		: int32
 	;;
 
 	type target = struct
@@ -16,6 +20,7 @@ pkg contbuild =
 		repo		: byte[:]
 		scratch		: byte[:]
 		remote		: byte[:]
+		gosucks		: byte[:]
 
 		/* commands */
 		setup		: byte[:][:]
@@ -40,6 +45,7 @@ pkg contbuild =
 		_htmlbase	: byte[:]
 		_built		: std.htab(byte[:], byte[:])#
 		_commitstatus	: std.htab(byte[:], bool)#
+		_lock		: thread.mutex
 	;;
 
 	type report = struct

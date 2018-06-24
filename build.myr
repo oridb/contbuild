@@ -1,6 +1,7 @@
 use std
 use sys
 use bio
+use thread
 
 use "types"
 use "repo"
@@ -22,7 +23,6 @@ const run = {build
 	while true
 		for t : build.targs
 			sync(t)
-			std.chdir(t._repo)
 			runonce(build, t)
 
 		;;
@@ -32,8 +32,23 @@ const run = {build
 }
 
 const runonce = {build, targ
-	var r : report
-	var ok, brlist
+	var brlist
+
+
+	brlist = std.tryv(branches(targ), [][:])
+	for (cm, br) : brlist
+		thread.spawn({
+			thread.semwait(&build.jobsem)
+			runbranch(build, targ, cm, br)
+			thread.sempost(&build.jobsem)
+		})
+	;;
+	std.slfree(brlist)
+}
+
+const runbranch = {build, targ, cm, br
+	var dir, idstr, idbuf : byte[32]
+	var r, ok, id
 
 	r = [
 		.setup=[.cmd="", .out="", .err="", .ok=`Norun],
@@ -42,47 +57,60 @@ const runonce = {build, targ
 		.clean=[.cmd="", .out="", .err="", .ok=`Norun],
 	]
 
-	brlist = std.tryv(branches(targ), [][:])
-	for (cm, br) : brlist
-		for u : updates(targ, br, cm)
-			if std.hthas(targ._commitstatus, u)
-				continue
-			;;
-			std.put("testing {}:{}\n", br, cm)
-			reset(&r)
-			if !checkout(targ, u)
-				continue
-			;;
-			purge(targ)
-			ok = testrun(targ, &r)
-			report(build, targ, &r, ok, u, br)
-			std.htput(targ._commitstatus, u, ok)
+	id = thread.xadd(&build.jobid, 1)
+	idstr = std.bfmt(idbuf[:], "{}", id)
+	dir = std.pathjoin([targ.scratch, idstr, targ.gosucks][:])
+	std.put("test dir: {}\n", dir)
+	std.mkpath(dir)
+	for u : updates(targ, br, cm)
+		if std.hthas(targ._commitstatus, u)
+			continue
 		;;
+		std.put("testing {}:{}\n", br, cm)
+		reset(&r)
+		if !checkout(targ, dir, u)
+			continue
+		;;
+		purge(targ, dir)
+		ok = testrun(targ, dir, &r)
+
+		thread.mtxlock(&build.reportmtx)
+		report(build, targ, &r, ok, u, br)
+		std.htput(targ._commitstatus, u, ok)
+		thread.mtxunlock(&build.reportmtx)
 	;;
+	//deltree(dir)
+	std.slfree(dir)
+	std.slfree(cm)
+	std.slfree(br)
 }
 
-const testrun = {t, r
-	-> runcmd(t, t.setup, &r.setup) && \
-		runcmd(t, t.build, &r.build) && \
-		runcmd(t, t.test, &r.test) && \
-		runcmd(t, t.clean, &r.clean)
+const testrun = {t, dir, r
+	-> runcmd(t, dir, t.setup, &r.setup) && \
+		runcmd(t, dir, t.build, &r.build) && \
+		runcmd(t, dir, t.test, &r.test) && \
+		runcmd(t, dir, t.clean, &r.clean)
 }
 
 const updates = {targ, branch, commit
+	thread.mtxlock(&targ._lock)
 	match std.htget(targ._built, branch)
 	| `std.None: 
 		std.htput(targ._built, std.sldup(branch), std.sldup(commit))
+		thread.mtxunlock(&targ._lock)
 		-> std.sldup([std.sldup(commit)][:])
 	| `std.Some old:
 		match between(targ, old, commit)
 		| `std.Ok r:
 			std.slfree(old)
 			std.htput(targ._built, branch, std.sldup(commit))
+			thread.mtxunlock(&targ._lock)
 			-> reverse(r)
 		| `std.Err err:
 			std.put("{}: unable to get updates for {}: {}\n",
 			    targ.name, branch, err)
 			std.slfree(err)
+			thread.mtxunlock(&targ._lock)
 			-> [][:]
 		;;
 	;;
@@ -140,13 +168,12 @@ const set = {s, v
 	s# = v
 }
 
-const runcmd = {t, cmd, r
+const runcmd = {t, dir, cmd, r
 	if cmd.len == 0
 		-> true
 	;;
 	set(&r.cmd, std.strjoin(cmd, " "))
-	std.put("run {}\n", r.cmd)
-	match readcmd(t, cmd)
+	match readcmd(t, dir, cmd)
 	| `std.Ok (out, err):
 		set(&r.out, out)
 		set(&r.err, err)

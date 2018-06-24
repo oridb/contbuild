@@ -1,5 +1,6 @@
 use std
 use bio
+use thread
 use inifile
 
 use "types"
@@ -13,6 +14,7 @@ const load = {cfg
 	var targs, ini
 	var tmpdir, scratch, period, htmlstyle
 	var logfile, logfd
+	var maxjobs
 
 	match inifile.load(cfg)
 	| `std.Ok f:	ini = f
@@ -23,6 +25,10 @@ const load = {cfg
 	tmpdir = std.pathcat(std.getenvv("TMP", "/tmp"), "contbuild-work")
 	htmlstyle = inifile.getv(ini, "", "htmlstyle", "/style.css")
 	scratch = inifile.getv(ini, "", "scratch", tmpdir)
+	match inifile.get(ini, "", "maxjobs")
+	| `std.Some v:	maxjobs = std.get(std.intparse(v))
+	| `std.None:	maxjobs = 4
+	;;
 
 	/* default 5 minute poll */
 	match std.intparse(inifile.getv(ini, "", "period", "300"))
@@ -33,6 +39,7 @@ const load = {cfg
 	default.name = ""
 	default.repo = inifile.getv(ini, "", "repo", "")
 	default.remote = inifile.getv(ini, "", "remote", "")
+	default.gosucks = inifile.getv(ini, "", "gosucks", "")
 	default.scratch = scratch
 
 	/* report options */
@@ -89,11 +96,14 @@ const load = {cfg
 		.scratch=scratch,
 		.period=period,
 		.htmlstyle=htmlstyle,
+		.reportmtx=thread.mkmtx(),
+		.jobsem=thread.mksem(maxjobs),
+		.jobid=0,
 	])
 }
 
 const loadtarg = {ini, s, default
-	var scratch, htmldir, htmlroot, htmlbase, htmlstyle
+	var scratch, htmldir, htmlroot, htmlbase, htmlstyle, gosucks
 	var commiturl, email
 	var setup, build, clean, test, report
 	var repo, remote
@@ -106,6 +116,7 @@ const loadtarg = {ini, s, default
 	htmlroot = inifile.getv(ini, s, "htmlroot", default.htmlroot)
 	htmlstyle = inifile.getv(ini, s, "htmlstyle", default.htmlstyle)
 	commiturl = inifile.getv(ini, s, "commiturl", default.commiturl)
+	gosucks = inifile.getv(ini, s, "gosucks", default.gosucks)
 	email = inifile.getv(ini, s, "email", default.email)
 	if std.hasprefix(htmldir, htmlroot)
 		htmlbase = std.pathcat("/", htmldir[htmlroot.len:])
@@ -141,6 +152,7 @@ const loadtarg = {ini, s, default
 		.repo=repo,
 		.scratch=scratch,
 		.remote=remote,
+		.gosucks=gosucks,
 
 		.setup=setup,
 		.build=build,
@@ -154,11 +166,12 @@ const loadtarg = {ini, s, default
 		.commiturl=commiturl,
 		.email=email,
 
-		._repo=std.pathcat(scratch, s),
+		._repo=std.pathjoin([scratch, s][:]),
 		._htmlbase=htmlbase,
 		._status=`Succ,
 		._built=std.mkht(),
 		._commitstatus=std.mkht(),
+		._lock=thread.mkmtx(),
 	])
 }
 
