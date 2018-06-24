@@ -2,6 +2,7 @@ use std
 use sys
 use bio
 use thread
+use fileutil
 
 use "types"
 use "repo"
@@ -47,7 +48,7 @@ const runonce = {build, targ
 }
 
 const runbranch = {build, targ, cm, br
-	var dir, idstr, idbuf : byte[32]
+	var dir, base, idstr, idbuf : byte[32]
 	var r, ok, id
 
 	r = [
@@ -59,6 +60,7 @@ const runbranch = {build, targ, cm, br
 
 	id = thread.xadd(&build.jobid, 1)
 	idstr = std.bfmt(idbuf[:], "{}", id)
+	base = std.pathcat(targ.scratch, idstr)
 	dir = std.pathjoin([targ.scratch, idstr, targ.gosucks][:])
 	std.put("test dir: {}\n", dir)
 	std.mkpath(dir)
@@ -79,7 +81,8 @@ const runbranch = {build, targ, cm, br
 		std.htput(targ._commitstatus, u, ok)
 		thread.mtxunlock(&build.reportmtx)
 	;;
-	//deltree(dir)
+	fileutil.rmrf(base)
+	std.slfree(base)
 	std.slfree(dir)
 	std.slfree(cm)
 	std.slfree(br)
