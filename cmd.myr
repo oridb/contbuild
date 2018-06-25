@@ -15,6 +15,10 @@ const readcmd = {t, dir, cmd
 
 	cmd = munge(t, dir, [][:], cmd)
 	r = readrawcmd(t, dir, cmd)
+	for c : cmd
+		std.slfree(c)
+	;;
+	std.slfree(cmd)
 	-> r
 }
 
