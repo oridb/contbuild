@@ -16,8 +16,7 @@ const main = {args
 		][:]
 	])
 
-	mask = 0
-//	std.slfill(mask.bits[:], 0)
+	std.slfill(mask.bits[:], 0)
 	sa = [
 	        .handler = ({;} : byte#),
 	        .flags = sys.Sarestart,
