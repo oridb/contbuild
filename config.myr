@@ -94,6 +94,7 @@ const loadtarg = {ini, s, default
 	var htmldir, htmlroot, htmlbase, htmlstyle
 	var email
 
+	htmlbase = ""
 	tip = inifile.getv(ini, s, "tip", default.tip)
 	repo = inifile.getv(ini, s, "repo", default.repo)
 	scratch = inifile.getv(ini, s, "scratch", default.scratch)
