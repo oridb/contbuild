@@ -1,0 +1,114 @@
+use std
+use sys
+use escfmt
+
+use "types"
+
+pkg contbuild =
+	const readcmd		: (t : target#, dir : byte[:], cmd : byte[:][:] -> std.result((byte[:], byte[:]), (byte[:], byte[:])))
+	const readrawcmd	: (t : target#, dir : byte[:], cmd : byte[:][:] -> std.result((byte[:], byte[:]), (byte[:], byte[:])))
+     	const munge 	: (t : target#, dir : byte[:], raw : byte[:][:], cmd : byte[:][:] -> byte[:][:])
+;;
+
+const readcmd = {t, dir, cmd
+	var r
+
+	cmd = munge(t, dir, [][:], cmd)
+	r = readrawcmd(t, dir, cmd)
+	-> r
+}
+
+const Wnohang = 1
+const readrawcmd = {t, dir, cmd
+	var res, st, out, err, ret
+	var pfd : sys.pollfd[:]
+	var buf : byte[8192]
+
+	std.put("dir={} run {j= }\n", dir, cmd)
+	match std.esporkdir(cmd, dir)
+	| `std.Ok (pid, stdin, stdout, stderr):
+		std.close(stdin) /* give it an early EOF */
+		res = 0
+		st = 0
+		out = ""
+		err = ""
+		pfd = [][:]
+		std.slpush(&pfd, [.fd=(stdout : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
+		std.slpush(&pfd, [.fd=(stderr : sys.fd), .events=sys.Pollin|sys.Pollhup, .revents=0])
+		while true
+			res = sys.waitpid((pid : sys.pid), &st, Wnohang)
+			/* No point in waiting if the child has already exited. */
+			if res != 0 || sys.poll(pfd, 1000) < 0
+				break
+			;;
+			
+			for var i = 0; i < pfd.len; i++
+				var p = &pfd[i]
+				if p.revents != 0 && p.fd == (stdout : sys.fd)
+					match std.read(stdout, buf[:])
+					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	out = std.sljoin(&out, buf[:n])
+					;;
+					break
+				elif p.revents != 0 && p.fd == (stderr : sys.fd)
+					match std.read(stderr, buf[:])
+					| `std.Err e:	out = std.fmt("unable to read fd {}: {}\n", p.fd, e)
+					| `std.Ok 0:	std.sldel(&pfd, i)
+					| `std.Ok n:	err = std.sljoin(&err, buf[:n])
+					;;
+					break
+				;;
+			;;
+			if res != 0
+				break
+			;;
+		;;
+
+		match sys.waitstatus(st)
+		| `sys.Waitexit 0:
+			ret = `std.Ok (out, err)
+		| _:    
+			ret = `std.Err (out, err)
+		;;
+
+		std.close(stdout)
+		std.close(stderr)
+		std.slfree(pfd)
+	| `std.Err e:
+		ret = `std.Err ("", std.sldup("unable to execute"))
+	;;
+	for c : cmd
+		std.slfree(c)
+	;;
+	std.slfree(cmd)
+	-> ret
+}
+
+const munge = {t, dir, raw, cmd
+	var command
+
+	command = [][:]
+	if t.remote.len == 0
+		for c : raw
+			std.slpush(&command, std.sldup(c))
+		;;
+		for c : cmd
+			std.slpush(&command, std.sldup(c))
+		;;
+	else
+		std.slpush(&command, std.sldup("ssh"))
+		std.slpush(&command, std.sldup(t.remote))
+		std.slpush(&command, std.sldup("cd"))
+		std.slpush(&command, std.fmt("{}", escfmt.sh(dir)))
+		std.slpush(&command, std.sldup("&&"))
+		for c : raw
+			std.slpush(&command, std.sldup(c))
+		;;
+		for c : cmd
+			std.slpush(&command, std.fmt("{}", escfmt.sh(c)))
+		;;
+	;;
+	-> command
+}
+

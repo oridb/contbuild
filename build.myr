@@ -6,6 +6,7 @@ use fileutil
 
 use "types"
 use "repo"
+use "cmd"
 use "report-html"
 use "report-email"
 use "report-cmd"

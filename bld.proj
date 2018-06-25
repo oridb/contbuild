@@ -2,6 +2,7 @@ bin contbuild =
 	main.myr
 	build.myr
 	config.myr
+	cmd.myr
 	repo.myr
 	report-html.myr
 	report-email.myr
